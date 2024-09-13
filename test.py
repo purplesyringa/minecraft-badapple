@@ -5,15 +5,19 @@ import os
 
 ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures"
 STRUCTURE_SIZE = 48
-VERSION = 3
+VERSION = 1
 WIDTH = 64
 HEIGHT = 48
-DEPTH = 4
+DEPTH = 5
+COLORS = [0, 9, 27, 49, 76, 106, 139, 175, 214, 255]
 
-with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/simpleblocks") as f:
-    simple_blocks = [name.strip() for name in f]
+with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/opaqueblocks") as f:
+    opaque_blocks = [name.strip() for name in f]
+with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/transparentblocks") as f:
+    transparent_blocks = [name.strip() for name in f]
+d_blocks = [opaque_blocks, transparent_blocks]
 
-last_frame = [[-1] * HEIGHT for _ in range(WIDTH)]
+last_frame = [[[-1] * HEIGHT for _ in range(WIDTH)] for _ in range(2)]
 
 frames = sorted(os.listdir("frames"))
 
@@ -76,10 +80,10 @@ for frame_num in range(len(frames) + 2):
                 Compound({
                     "Name": String("minecraft:repeater"),
                     "Properties": Compound({
-                        "delay": Int(1),
+                        "delay": String("1"),
                         "facing": String(["east", "south"][i]),
-                        "locked": Byte(0),
-                        "powered": Byte(0)
+                        "locked": String("false"),
+                        "powered": String("false")
                     })
                 }),
                 Compound({
@@ -109,31 +113,31 @@ for frame_num in range(len(frames) + 2):
                     })
                 ]
 
-                texture_id_to_palette_index = {}
+                for d in range(2):
+                    texture_id_to_palette_index = {}
 
-                for ix in range(width):
-                    for iy in range(height):
-                        x = sx * STRUCTURE_SIZE + ix
-                        y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
-                        b1 = pix[x * 2, y * 2][0] // 0x4e
-                        b2 = pix[x * 2, y * 2 + 1][0] // 0x4e
-                        b3 = pix[x * 2 + 1, y * 2][0] // 0x4e
-                        b4 = pix[x * 2 + 1, y * 2 + 1][0] // 0x4e
-                        texture_id = (b1 << 6) | (b2 << 4) | (b3 << 2) | b4
+                    for ix in range(width):
+                        for iy in range(height):
+                            x = sx * STRUCTURE_SIZE + ix
+                            y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
 
-                        if last_frame[x][y] == texture_id:
-                            continue
-                        last_frame[x][y] = texture_id
+                            top = COLORS.index(pix[x * 2 + d, y * 2][0])
+                            bottom = COLORS.index(pix[x * 2 + d, y * 2 + 1][0])
+                            texture_id = top + bottom * len(COLORS)
 
-                        if texture_id not in texture_id_to_palette_index:
-                            texture_id_to_palette_index[texture_id] = len(palette)
-                            palette.append(Compound({
-                                "Name": String(f"minecraft:{simple_blocks[texture_id]}"),
+                            if last_frame[d][x][y] == texture_id:
+                                continue
+                            last_frame[d][x][y] = texture_id
+
+                            if texture_id not in texture_id_to_palette_index:
+                                texture_id_to_palette_index[texture_id] = len(palette)
+                                palette.append(Compound({
+                                    "Name": String(f"minecraft:{d_blocks[d][texture_id]}"),
+                                }))
+                            blocks.append(Compound({
+                                "pos": List[Int]([ix, iy, 3 + d]),
+                                "state": Int(texture_id_to_palette_index[texture_id])
                             }))
-                        blocks.append(Compound({
-                            "pos": List[Int]([ix, iy, 3]),
-                            "state": Int(texture_id_to_palette_index[texture_id])
-                        }))
             else:
                 if i == 0:
                     blocks += [
