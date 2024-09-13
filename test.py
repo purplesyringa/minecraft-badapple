@@ -3,9 +3,9 @@ from nbtlib import File, Compound, List, Int, String, Byte, Long, Float
 from PIL import Image
 import os
 
-ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/minecraft/structures"
+ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures"
 STRUCTURE_SIZE = 48
-VERSION = 2
+VERSION = 3
 WIDTH = 64
 HEIGHT = 48
 DEPTH = 4
@@ -15,17 +15,20 @@ with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/simpleblocks") as f:
 
 last_frame = [[-1] * HEIGHT for _ in range(WIDTH)]
 
-for frame_num, frame in enumerate(sorted(os.listdir("frames"))):
+frames = sorted(os.listdir("frames"))
+
+for frame_num in range(len(frames) + 2):
     if frame_num % 10 == 0:
         print("Frame", frame_num)
 
-    im = Image.open(f"frames/{frame}")
-    pix = im.load()
-    assert im.width == WIDTH * 2
-    assert im.height == HEIGHT * 2
-
     i = frame_num // 2 % 2
     j = frame_num % 2
+
+    if frame_num < len(frames):
+        im = Image.open(f"frames/{frames[frame_num]}")
+        pix = im.load()
+        assert im.width == WIDTH * 2
+        assert im.height == HEIGHT * 2
 
     for sx in range((WIDTH + STRUCTURE_SIZE - 1) // STRUCTURE_SIZE):
         for sy in range((HEIGHT + STRUCTURE_SIZE - 1) // STRUCTURE_SIZE):
@@ -44,31 +47,19 @@ for frame_num, frame in enumerate(sorted(os.listdir("frames"))):
                         "metadata": String(""),
                         "mirror": String("NONE"),
                         "mode": String("LOAD"),
-                        "name": String(f"minecraft:frame{frame_num + 2}.{sx}{sy}v{VERSION}"),
+                        "name": String(f"badapple:frame{frame_num + 2 if frame_num < len(frames) else j}.{sx}{sy}v{VERSION}"),
                         "posX": Int(-4 * j),
                         "posY": Int(0),
                         "posZ": Int(0),
                         "powered": Byte(0),
                         "rotation": String("NONE"),
                         "seed": Long(0),
-                        "showboundingbox": Byte(1),
+                        "showboundingbox": Byte(0),
                         "sizeX": Int(width),
                         "sizeY": Int(height),
                         "sizeZ": Int(DEPTH),
                         "showair": Byte(0)
                     })
-                }),
-                Compound({
-                    "pos": List[Int]([1 - i + 4 * j, 0, i]),
-                    "state": Int(1)
-                }),
-                Compound({
-                    "pos": List[Int]([i + 4 * j, 0, 1 - i]),
-                    "state": Int(2)
-                }),
-                Compound({
-                    "pos": List[Int]([2 * (1 - i) + 4 * j, 0, 2 * i]),
-                    "state": Int(3)
                 }),
                 Compound({
                     "pos": List[Int]([2 * i + 4 * j, 0, 2 * (1 - i)]),
@@ -96,34 +87,67 @@ for frame_num, frame in enumerate(sorted(os.listdir("frames"))):
                 }),
                 Compound({
                     "Name": String("minecraft:redstone_block"),
+                }),
+                Compound({
+                    "Name": String("minecraft:stone"),
                 })
             ]
 
-            texture_id_to_palette_index = {}
+            if frame_num < len(frames):
+                blocks += [
+                    Compound({
+                        "pos": List[Int]([i + 4 * j, 0, 1 - i]),
+                        "state": Int(2)
+                    }),
+                    Compound({
+                        "pos": List[Int]([1 - i + 4 * j, 0, i]),
+                        "state": Int(1)
+                    }),
+                    Compound({
+                        "pos": List[Int]([2 * (1 - i) + 4 * j, 0, 2 * i]),
+                        "state": Int(3)
+                    })
+                ]
 
-            for ix in range(width):
-                for iy in range(height):
-                    x = sx * STRUCTURE_SIZE + ix
-                    y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
-                    b1 = pix[x * 2, y * 2][0] // 0x4e
-                    b2 = pix[x * 2, y * 2 + 1][0] // 0x4e
-                    b3 = pix[x * 2 + 1, y * 2][0] // 0x4e
-                    b4 = pix[x * 2 + 1, y * 2 + 1][0] // 0x4e
-                    texture_id = (b1 << 6) | (b2 << 4) | (b3 << 2) | b4
+                texture_id_to_palette_index = {}
 
-                    if last_frame[x][y] == texture_id:
-                        continue
-                    last_frame[x][y] = texture_id
+                for ix in range(width):
+                    for iy in range(height):
+                        x = sx * STRUCTURE_SIZE + ix
+                        y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
+                        b1 = pix[x * 2, y * 2][0] // 0x4e
+                        b2 = pix[x * 2, y * 2 + 1][0] // 0x4e
+                        b3 = pix[x * 2 + 1, y * 2][0] // 0x4e
+                        b4 = pix[x * 2 + 1, y * 2 + 1][0] // 0x4e
+                        texture_id = (b1 << 6) | (b2 << 4) | (b3 << 2) | b4
 
-                    if texture_id not in texture_id_to_palette_index:
-                        texture_id_to_palette_index[texture_id] = len(palette)
-                        palette.append(Compound({
-                            "Name": String(f"minecraft:{simple_blocks[texture_id]}"),
+                        if last_frame[x][y] == texture_id:
+                            continue
+                        last_frame[x][y] = texture_id
+
+                        if texture_id not in texture_id_to_palette_index:
+                            texture_id_to_palette_index[texture_id] = len(palette)
+                            palette.append(Compound({
+                                "Name": String(f"minecraft:{simple_blocks[texture_id]}"),
+                            }))
+                        blocks.append(Compound({
+                            "pos": List[Int]([ix, iy, 3]),
+                            "state": Int(texture_id_to_palette_index[texture_id])
                         }))
-                    blocks.append(Compound({
-                        "pos": List[Int]([ix, iy, 3]),
-                        "state": Int(texture_id_to_palette_index[texture_id])
-                    }))
+            else:
+                if i == 0:
+                    blocks += [
+                        Compound({
+                            "pos": List[Int]([i + 4 * j, 0, 1 - i]),
+                            "state": Int(2)
+                        })
+                    ]
+                blocks += [
+                    Compound({
+                        "pos": List[Int]([1 + 4 * j, 0, 0]),
+                        "state": Int(4)
+                    })
+                ]
 
             File(Compound({
                 "size": List[Int]([width, height, DEPTH]),
