@@ -6,14 +6,14 @@ import os
 ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures"
 STRUCTURE_SIZE = 48
 VERSION = 1
-WIDTH = 64
-HEIGHT = 48
+WIDTH = 128
+HEIGHT = 96
 DEPTH = 5
 COLORS = [0, 9, 27, 49, 76, 106, 139, 175, 214, 255]
 
-with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/opaqueblocks") as f:
+with open("opaqueblocks") as f:
     opaque_blocks = [name.strip() for name in f]
-with open("/baka/minecraft/resourcepacks/Bad Apple!!/assets/transparentblocks") as f:
+with open("transparentblocks") as f:
     transparent_blocks = [name.strip() for name in f]
 d_blocks = [opaque_blocks, transparent_blocks]
 
