@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 
 
 ROOT = "/baka/minecraft/resourcepacks/Bad Apple!!/assets"
-COLORS = [0, 9, 27, 49, 76, 106, 139, 175, 214, 255]
+COLORS = [0, 9, 26, 49, 75, 105, 139, 174, 213, 255]
 
 
 os.makedirs(f"{ROOT}/minecraft/blockstates")
@@ -35,7 +35,6 @@ with open("opaqueblocks") as f:
                         "from": [0, 0, 16],
                         "to": [8, 16, 16],
                         "faces": {
-                            "north": {"texture": "#front"},
                             "south": {"texture": "#front"}
                         }
                     },
@@ -43,8 +42,7 @@ with open("opaqueblocks") as f:
                         "from": [0, 0, 0],
                         "to": [16, 16, 0],
                         "faces": {
-                            "north": {"texture": "#back"},
-                            "south": {"texture": "#back"}
+                            "north": {"texture": "#back"}
                         }
                     }
                 ],
@@ -84,7 +82,6 @@ with open("transparentblocks") as f:
                         "from": [8, 0, 0],
                         "to": [16, 16, 0],
                         "faces": {
-                            "north": {"texture": "#back"},
                             "south": {"texture": "#back"}
                         }
                     }
@@ -123,19 +120,11 @@ with open("commonblocks") as f:
                 "ambientocclusion": False,
                 "elements": [
                     {
-                        "from": [0, 0, 16],
+                        "from": [0, 0, 0],
                         "to": [16, 16, 16],
                         "faces": {
-                            "north": {"texture": "#front"},
-                            "south": {"texture": "#front"}
-                        }
-                    },
-                    {
-                        "from": [0, 0, 0],
-                        "to": [16, 16, 0],
-                        "faces": {
                             "north": {"texture": "#back"},
-                            "south": {"texture": "#back"}
+                            "south": {"texture": "#front"}
                         }
                     }
                 ],
@@ -147,8 +136,8 @@ with open("commonblocks") as f:
 
         im = Image.new("L", (16, 16))
         draw = ImageDraw.Draw(im)
-        draw.rectangle((0, 0, 7, 7), fill=super_pixel[0][0])
-        draw.rectangle((0, 8, 7, 15), fill=super_pixel[1][0])
-        draw.rectangle((8, 0, 15, 7), fill=super_pixel[2][0])
-        draw.rectangle((8, 8, 15, 15), fill=super_pixel[3][0])
+        draw.rectangle((0, 0, 7, 7), fill=super_pixel[0])
+        draw.rectangle((0, 8, 7, 15), fill=super_pixel[1])
+        draw.rectangle((8, 0, 15, 7), fill=super_pixel[2])
+        draw.rectangle((8, 8, 15, 15), fill=super_pixel[3])
         im.save(f"{ROOT}/badapple/textures/block/{name}.png", "PNG")

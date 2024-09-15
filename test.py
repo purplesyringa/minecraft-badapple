@@ -10,7 +10,7 @@ VERSION = 1
 WIDTH = 128
 HEIGHT = 96
 DEPTH = 5
-COLORS = [0, 9, 27, 49, 76, 106, 139, 175, 214, 255]
+COLORS = [0, 9, 26, 49, 75, 105, 139, 174, 213, 255]
 
 with open("opaqueblocks") as f:
     opaque_blocks = [name.strip() for name in f]
@@ -21,10 +21,7 @@ d_blocks = [opaque_blocks, transparent_blocks]
 with open("commonblocks") as f:
     common_blocks = [name.strip() for name in f]
 with open("commonsuperpixels.json") as f:
-    common_super_pixels = {
-        tuple(pixel[0] for pixel in pixels): i
-        for i, pixels in enumerate(json.load(f))
-    }
+    common_super_pixels = {tuple(pixel): i for i, pixel in enumerate(json.load(f))}
 
 last_frame = [[[""] * HEIGHT for _ in range(WIDTH)] for _ in range(2)]
 
@@ -129,14 +126,14 @@ for frame_num in range(len(frames) + 2):
                         x = sx * STRUCTURE_SIZE + ix
                         y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
 
-                        pixel = tuple(pix[x * 2 + dx, y * 2 + dy][0] for dx in range(2) for dy in range(2))
+                        pixel = tuple(pix[x * 2 + dx, y * 2 + dy] for dx in range(2) for dy in range(2))
                         if pixel in common_super_pixels:
                             block_names = [common_blocks[common_super_pixels[pixel]], "barrier"]
                         else:
                             block_names = []
                             for z in range(2):
-                                top = COLORS.index(pix[x * 2 + z, y * 2][0])
-                                bottom = COLORS.index(pix[x * 2 + z, y * 2 + 1][0])
+                                top = COLORS.index(pix[x * 2 + z, y * 2])
+                                bottom = COLORS.index(pix[x * 2 + z, y * 2 + 1])
                                 block_names.append(d_blocks[z][top + bottom * len(COLORS)])
 
                         for z, block_name in enumerate(block_names):

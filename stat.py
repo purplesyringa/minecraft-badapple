@@ -42,6 +42,6 @@ for frame_num, frame in enumerate(sorted(os.listdir("frames"))):
             last_frame[x][y] = pixel
 
 print(json.dumps({
-    "vertices": [[list(pixel) for pixel in pixels] for pixels in vertices],
+    "vertices": [list(pixel) for pixel in vertices],
     "edges": [[a, b, w] for (a, b), w in edges.items()]
 }))

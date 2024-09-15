@@ -8,10 +8,7 @@ struct Graph {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
-struct Vertex([Pixel; 4]);
-
-#[derive(Serialize, Deserialize, Copy, Clone)]
-struct Pixel([u8; 3]);
+struct Vertex([u8; 4]);
 
 #[derive(Deserialize, Copy, Clone)]
 struct Edge {
@@ -26,7 +23,7 @@ struct Link {
     w: usize,
 }
 
-const MAX_SUBGRAPH_SIZE: usize = 48;
+const MAX_SUBGRAPH_SIZE: usize = 64;
 
 struct Bruteforcer {
     graph: Graph,
@@ -109,33 +106,35 @@ impl Bruteforcer {
 
         let right_subgraph_size_limit = MAX_SUBGRAPH_SIZE - self.subgraph.len();
 
-        let mut cross_weight_by_right_vertex = vec![0; self.graph.vertices.len()];
-        for &u in &self.subgraph {
-            for link in &self.edges_to_right[u] {
-                if link.v >= next_vertex {
-                    cross_weight_by_right_vertex[link.v] += link.w;
-                }
-            }
-        }
-
-        let cross_subgraph_weight_limit = if right_subgraph_size_limit == 0 {
-            0
-        } else {
-            let offset = self.graph.vertices.len() - right_subgraph_size_limit;
-            cross_weight_by_right_vertex.select_nth_unstable(offset);
-            cross_weight_by_right_vertex[offset..].iter().sum()
-        };
-
         let right_subgraph_weight_limit = self.upper_limits[next_vertex][right_subgraph_size_limit];
 
-        let weight_limit =
-            self.subgraph_weight + cross_subgraph_weight_limit + right_subgraph_weight_limit;
-        if weight_limit <= self.best_weight_so_far {
-            // eprintln!(
-            //     "Weight limit at {:?} is {}",
-            //     self.subgraph, cross_subgraph_weight_limit
-            // );
-            return;
+        if self.subgraph_weight + right_subgraph_weight_limit <= self.best_weight_so_far {
+            let cross_subgraph_weight_limit = if right_subgraph_size_limit == 0 {
+                0
+            } else {
+                let mut cross_weight_by_right_vertex = vec![0; self.graph.vertices.len()];
+                for &u in &self.subgraph {
+                    for link in &self.edges_to_right[u] {
+                        if link.v >= next_vertex {
+                            cross_weight_by_right_vertex[link.v] += link.w;
+                        }
+                    }
+                }
+
+                let offset = self.graph.vertices.len() - right_subgraph_size_limit;
+                cross_weight_by_right_vertex.select_nth_unstable(offset);
+                cross_weight_by_right_vertex[offset..].iter().sum()
+            };
+
+            let weight_limit =
+                self.subgraph_weight + cross_subgraph_weight_limit + right_subgraph_weight_limit;
+            if weight_limit <= self.best_weight_so_far {
+                // eprintln!(
+                //     "Weight limit at {:?} is {}",
+                //     self.subgraph, cross_subgraph_weight_limit
+                // );
+                return;
+            }
         }
 
         // Take
@@ -153,7 +152,7 @@ impl Bruteforcer {
         }
 
         // Don't take
-        self.run(next_vertex + 1);
+        // self.run(next_vertex + 1);
     }
 }
 
