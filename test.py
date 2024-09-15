@@ -2,6 +2,7 @@ import nbtlib
 from nbtlib import File, Compound, List, Int, String, Byte, Long, Float
 from PIL import Image
 import os
+import json
 
 ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures"
 STRUCTURE_SIZE = 48
@@ -17,7 +18,15 @@ with open("transparentblocks") as f:
     transparent_blocks = [name.strip() for name in f]
 d_blocks = [opaque_blocks, transparent_blocks]
 
-last_frame = [[[-1] * HEIGHT for _ in range(WIDTH)] for _ in range(2)]
+with open("commonblocks") as f:
+    common_blocks = [name.strip() for name in f]
+with open("commonsuperpixels.json") as f:
+    common_super_pixels = {
+        tuple(pixel[0] for pixel in pixels): i
+        for i, pixels in enumerate(json.load(f))
+    }
+
+last_frame = [[[""] * HEIGHT for _ in range(WIDTH)] for _ in range(2)]
 
 frames = sorted(os.listdir("frames"))
 
@@ -113,30 +122,36 @@ for frame_num in range(len(frames) + 2):
                     })
                 ]
 
-                for d in range(2):
-                    texture_id_to_palette_index = {}
+                block_name_to_palette_index = {}
 
-                    for ix in range(width):
-                        for iy in range(height):
-                            x = sx * STRUCTURE_SIZE + ix
-                            y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
+                for ix in range(width):
+                    for iy in range(height):
+                        x = sx * STRUCTURE_SIZE + ix
+                        y = HEIGHT - 1 - (sy * STRUCTURE_SIZE + iy)
 
-                            top = COLORS.index(pix[x * 2 + d, y * 2][0])
-                            bottom = COLORS.index(pix[x * 2 + d, y * 2 + 1][0])
-                            texture_id = top + bottom * len(COLORS)
+                        pixel = tuple(pix[x * 2 + dx, y * 2 + dy][0] for dx in range(2) for dy in range(2))
+                        if pixel in common_super_pixels:
+                            block_names = [common_blocks[common_super_pixels[pixel]], "barrier"]
+                        else:
+                            block_names = []
+                            for z in range(2):
+                                top = COLORS.index(pix[x * 2 + z, y * 2][0])
+                                bottom = COLORS.index(pix[x * 2 + z, y * 2 + 1][0])
+                                block_names.append(d_blocks[z][top + bottom * len(COLORS)])
 
-                            if last_frame[d][x][y] == texture_id:
+                        for z, block_name in enumerate(block_names):
+                            if last_frame[z][x][y] == block_name:
                                 continue
-                            last_frame[d][x][y] = texture_id
+                            last_frame[z][x][y] = block_name
 
-                            if texture_id not in texture_id_to_palette_index:
-                                texture_id_to_palette_index[texture_id] = len(palette)
+                            if block_name not in block_name_to_palette_index:
+                                block_name_to_palette_index[block_name] = len(palette)
                                 palette.append(Compound({
-                                    "Name": String(f"minecraft:{d_blocks[d][texture_id]}"),
+                                    "Name": String(f"minecraft:{block_name}"),
                                 }))
                             blocks.append(Compound({
-                                "pos": List[Int]([ix, iy, 3 + d]),
-                                "state": Int(texture_id_to_palette_index[texture_id])
+                                "pos": List[Int]([ix, iy, 3 + z]),
+                                "state": Int(block_name_to_palette_index[block_name])
                             }))
             else:
                 if i == 0:

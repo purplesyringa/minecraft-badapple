@@ -99,3 +99,56 @@ with open("transparentblocks") as f:
         draw.rectangle((0, 0, 15, 7), fill=COLORS[i % len(COLORS)])
         draw.rectangle((0, 8, 15, 15), fill=COLORS[i // len(COLORS)])
         im.save(f"{ROOT}/badapple/textures/block/{name}.png", "PNG")
+
+
+with open("commonsuperpixels.json") as f:
+    common_super_pixels = json.load(f)
+
+
+with open("commonblocks") as f:
+    for super_pixel, name in zip(common_super_pixels, f):
+        name = name.strip()
+
+        with open(f"{ROOT}/minecraft/blockstates/{name}.json", "w") as f1:
+            json.dump({
+                "variants": {
+                    "": {
+                        "model": f"badapple:block/{name}"
+                    }
+                }
+            }, f1)
+
+        with open(f"{ROOT}/badapple/models/block/{name}.json", "w") as f1:
+            json.dump({
+                "ambientocclusion": False,
+                "elements": [
+                    {
+                        "from": [0, 0, 16],
+                        "to": [16, 16, 16],
+                        "faces": {
+                            "north": {"texture": "#front"},
+                            "south": {"texture": "#front"}
+                        }
+                    },
+                    {
+                        "from": [0, 0, 0],
+                        "to": [16, 16, 0],
+                        "faces": {
+                            "north": {"texture": "#back"},
+                            "south": {"texture": "#back"}
+                        }
+                    }
+                ],
+                "textures": {
+                    "front": f"badapple:block/{name}",
+                    "back": "minecraft:block/cobblestone"
+                }
+            }, f1)
+
+        im = Image.new("L", (16, 16))
+        draw = ImageDraw.Draw(im)
+        draw.rectangle((0, 0, 7, 7), fill=super_pixel[0][0])
+        draw.rectangle((0, 8, 7, 15), fill=super_pixel[1][0])
+        draw.rectangle((8, 0, 15, 7), fill=super_pixel[2][0])
+        draw.rectangle((8, 8, 15, 15), fill=super_pixel[3][0])
+        im.save(f"{ROOT}/badapple/textures/block/{name}.png", "PNG")
