@@ -1,0 +1,25 @@
+{
+    "assets_root": "/baka/minecraft/resourcepacks/Bad Apple!!/assets",
+    "structures_root": "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures",
+    "frames_root": "/home/purplesyringa/badapple/frames",
+    "colors": [
+        [0, 0, 0],
+        [85, 85, 85],
+        [170, 170, 170],
+        [255, 255, 255]
+    ],
+    "subpixels": {
+        "width": 4,
+        "height": 4,
+        "distribution": [
+            [0, 0, 0, 1],
+            [0, 0, 1, 1],
+            [2, 2, 3, 3],
+            [2, 2, 3, 3]
+        ]
+    },
+    "video": {
+        "width": 512,
+        "height": 384
+    }
+}

@@ -3,10 +3,10 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 192;
-const GAMMA: f64 = 1.5;
-const HALFTONES: u16 = 10;
+const WIDTH: usize = 512;
+const HEIGHT: usize = 384;
+const GAMMA: f64 = 1.0;
+const HALFTONES: u16 = 4;
 
 fn build_table(power: f64, inmin: u8, inmax: u8) -> [u8; 256] {
     (0..=255)
@@ -58,12 +58,7 @@ fn main() {
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
-                let sum: u16 = (x * 2..x * 2 + 2)
-                    .cartesian_product(y * 2..y * 2 + 2)
-                    .map(|(x1, y1)| to_linear[in_bytes[(y1 * WIDTH * 2 + x1) * 3] as usize] as u16)
-                    .sum();
-                let value = sum / 4;
-
+                let value = to_linear[in_bytes[(y * WIDTH + x) * 3] as usize];
                 let noise = noise_bytes[(y * WIDTH + x) * 4] as u16;
 
                 let dithered_value = ((value as u16 * (HALFTONES - 1)) as f64 / 255.0

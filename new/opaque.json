@@ -1,0 +1,11 @@
+dirt_path {}
+farmland {"moisture":["0","1","2","3","4","5","6","7"]}
+mycelium {"snowy":["false","true"]}
+mushroom_stem {"down":["true","false"],"east":["true","false"],"north":["true","false"],"south":["true","false"],"up":["true","false"],"west":["true","false"]}
+snow {"layers":["1","2","3","4","5","6","7","8"]}
+grass_block {"snowy":["false","true"]}
+acacia_leaves azalea_leaves birch_leaves cherry_leaves dark_oak_leaves flowering_azalea_leaves jungle_leaves mangrove_leaves oak_leaves spruce_leaves {}
+sculk_sensor {} // {"sculk_sensor_phase":["active","cooldown","inactive"]}
+calibrated_sculk_sensor {"facing":["east","north","south","west"]} // {"sculk_sensor_phase":["active","cooldown","inactive"]}
+redstone_lamp {"lit":["false","true"]}
+oxidized_copper_bulb waxed_copper_bulb waxed_exposed_copper_bulb waxed_oxidized_copper_bulb waxed_weathered_copper_bulb {"lit":["false","true"],"powered":["false","true"]}
