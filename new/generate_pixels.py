@@ -114,7 +114,7 @@ for z, subpixels in enumerate(subpixels_by_z):
             }
         }
         with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
-            json.dump(model_description, f)
+            json.dump(model_description, f, separators=(",", ":"))
         model_location = f"badapple:m{next_id}"
 
         next_id += 1
@@ -140,4 +140,4 @@ for block, variants in block_to_variants.items():
     }
 
     with open(f"{assets_root}/minecraft/blockstates/{block}.json", "w") as f:
-        json.dump(blockstates_description, f)
+        json.dump(blockstates_description, f, separators=(",", ":"))
