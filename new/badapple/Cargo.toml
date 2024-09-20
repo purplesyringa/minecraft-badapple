@@ -1,5 +1,5 @@
 [package]
-name = "render_frames"
+name = "badapple"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,3 +12,11 @@ serde_json = "1.0.128"
 
 [profile.release]
 debug = true
+
+[[bin]]
+name = "render_frames"
+path = "src/render_frames.rs"
+
+[[bin]]
+name = "predict_subpixel_colors"
+path = "src/predict_subpixel_colors.rs"

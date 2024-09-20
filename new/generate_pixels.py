@@ -35,6 +35,13 @@ with open("config.json") as f:
     assets_root = config["assets_root"]
 
 
+with open("subpixel_predictions.json") as f:
+    predictions: dict[tuple[tuple[int, int, int]], list[list[int]]] = {}
+    for prediction in json.load(f):
+        key = tuple(map(tuple, prediction["from"]))
+        predictions[key] = prediction["to"]
+
+
 catalogue_by_kind: dict[str, Catalogue] = {}
 
 for kind in ["opaque", "transparent"]:
@@ -76,16 +83,26 @@ for z, subpixels in enumerate(subpixels_by_z):
     for subpixel_colors in itertools.product(config["colors"], repeat=len(subpixels)):
         im = Image.new("RGBA", (config["subpixels"]["width"], config["subpixels"]["height"]))
         pix = im.load()
+        if z == 0:
+            key = tuple(map(tuple, subpixel_colors))
+            prediction = predictions.get(key)
+            if prediction:
+                for (y, x), color in zip(
+                    itertools.product(range(im.height), range(im.width)),
+                    prediction
+                ):
+                    pix[x, y] = tuple(color + [255])
         for (x, y), color in zip(subpixels, subpixel_colors):
             pix[x, y] = tuple(color + [255])
         im.save(f"{assets_root}/badapple/textures/block/t{next_id}.png")
 
+        dz = (2 - z) * 16 - (0.01 if z == 0 else 0)
         model_description = {
             "ambientocclusion": False,
             "elements": [
                 {
-                    "from": [0, 0, (2 - z) * 16],
-                    "to": [16, 16, (2 - z) * 16],
+                    "from": [0, 0, dz],
+                    "to": [16, 16, dz],
                     "shade": False,
                     "faces": {
                         "south": {"texture": "#front"}

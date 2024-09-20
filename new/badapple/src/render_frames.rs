@@ -1,3 +1,6 @@
+mod types;
+
+use crate::types::{Color, Config};
 use fastnbt::{nbt, value::Value};
 use flate2::{write::GzEncoder, Compression};
 use image::RgbImage;
@@ -6,28 +9,6 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
-
-#[derive(Deserialize)]
-struct Config {
-    video: ConfigVideo,
-    subpixels: ConfigSubpixels,
-    structures_root: String,
-    frames_root: PathBuf,
-}
-
-#[derive(Deserialize)]
-struct ConfigVideo {
-    width: usize,
-    height: usize,
-}
-
-#[derive(Deserialize)]
-struct ConfigSubpixels {
-    width: usize,
-    height: usize,
-    distribution: Vec<Vec<usize>>,
-}
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 struct NBT(HashMap<String, String>);
@@ -39,9 +20,6 @@ struct BlockState {
 }
 
 type EquivalentBlockStates = Vec<BlockState>;
-
-#[derive(Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
-struct Color(u8, u8, u8);
 
 #[derive(Deserialize, PartialEq, Eq, Hash)]
 struct RenderRuleKey {
