@@ -22,5 +22,5 @@ pub struct ConfigSubpixels {
     pub distribution: Vec<Vec<usize>>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color(pub u8, pub u8, pub u8);

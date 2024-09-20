@@ -67,9 +67,18 @@ struct Structure {
     data_version: i32,
 }
 
+#[derive(Deserialize)]
+struct Prediction {
+    from: Vec<Color>,
+    to: Vec<Color>,
+}
+
 const STRUCTURE_SIZE: usize = 48;
 const VERSION: usize = 2;
 const DEPTH: usize = 7;
+
+const BLOCKSTATE_UNKNOWN: (usize, usize) = (usize::MAX, 0);
+const BLOCKSTATE_BARRIER: (usize, usize) = (usize::MAX, 1);
 
 fn main() {
     let config: Config = serde_json::from_str(
@@ -102,10 +111,20 @@ fn main() {
         );
     }
 
+    let subpixel_predictions: HashMap<Vec<Color>, Vec<Color>> =
+        serde_json::from_str::<Vec<Prediction>>(
+            &std::fs::read_to_string("../subpixel_predictions.json")
+                .expect("Failed to read subpixel_predictions.json"),
+        )
+        .expect("Invalid subpixel predictions")
+        .into_iter()
+        .map(|prediction| (prediction.from, prediction.to))
+        .collect();
+
     let mut current_video_blockstates: Vec<Vec<[(usize, usize); 4]>> = (0..block_width)
         .map(|_x| {
             (0..block_height)
-                .map(|_y| [(usize::MAX, usize::MAX); 4])
+                .map(|_y| [BLOCKSTATE_UNKNOWN; 4])
                 .collect()
         })
         .collect();
@@ -118,7 +137,7 @@ fn main() {
 
     for frame_num in 0..frame_file_names.len() + 2 {
         if frame_num % 10 == 0 {
-            println!("Frame {frame_num}");
+            eprintln!("Frame {frame_num}");
         }
 
         let half_parity = frame_num / 2 % 2;
@@ -224,41 +243,69 @@ fn main() {
                             let block_y =
                                 block_height - 1 - (megapixel_y * STRUCTURE_SIZE + relative_y);
 
-                            for z in 0..4 {
-                                let subpixel_colors: Vec<Color> = subpixels_by_z[z]
-                                    .iter()
-                                    .map(|(relative_subpixel_x, relative_subpixel_y)| {
-                                        let subpixel_x =
-                                            block_x * config.subpixels.width + relative_subpixel_x;
-                                        let subpixel_y =
-                                            block_y * config.subpixels.height + relative_subpixel_y;
-                                        let pixel =
-                                            frame.get_pixel(subpixel_x as u32, subpixel_y as u32);
-                                        Color(pixel.0[0], pixel.0[1], pixel.0[2])
-                                    })
-                                    .collect();
+                            let mut subpixel_colors_by_z = [const { Vec::new() }; 4];
+                            for relative_subpixel_y in 0..config.subpixels.height {
+                                for relative_subpixel_x in 0..config.subpixels.width {
+                                    let z = config.subpixels.distribution[relative_subpixel_y]
+                                        [relative_subpixel_x];
 
-                                let render_rule = &render_rules[&RenderRuleKey {
-                                    z,
-                                    subpixel_colors: subpixel_colors.clone(),
-                                }];
-                                let index = (block_x + block_y + z) % render_rule.blockstates.len();
-                                let blockstate = &render_rule.blockstates[index];
+                                    let subpixel_x =
+                                        block_x * config.subpixels.width + relative_subpixel_x;
+                                    let subpixel_y =
+                                        block_y * config.subpixels.height + relative_subpixel_y;
+                                    let pixel =
+                                        frame.get_pixel(subpixel_x as u32, subpixel_y as u32);
+                                    let color = Color(pixel.0[0], pixel.0[1], pixel.0[2]);
+
+                                    subpixel_colors_by_z[z].push(color);
+                                }
+                            }
+
+                            let prediction = subpixel_predictions.get(&subpixel_colors_by_z[0]);
+
+                            for (z, subpixel_colors) in subpixel_colors_by_z.into_iter().enumerate()
+                            {
+                                let blockstate;
+                                let blockstate_key;
+
+                                if z > 0
+                                    && prediction.is_some_and(|prediction| {
+                                        subpixel_colors.iter().zip(&subpixels_by_z[z]).all(
+                                            |(color, (x, y))| {
+                                                *color
+                                                    == prediction[y * config.subpixels.height + x]
+                                            },
+                                        )
+                                    })
+                                {
+                                    blockstate = BlockState {
+                                        block: "barrier".to_string(),
+                                        state: NBT(HashMap::new()),
+                                    };
+                                    blockstate_key = BLOCKSTATE_BARRIER;
+                                } else {
+                                    let render_rule = &render_rules[&RenderRuleKey {
+                                        z,
+                                        subpixel_colors: subpixel_colors.clone(),
+                                    }];
+                                    let index =
+                                        (block_x + block_y + z) % render_rule.blockstates.len();
+                                    blockstate = render_rule.blockstates[index].clone();
+                                    blockstate_key = (render_rule.id, index);
+                                }
 
                                 let cur = &mut current_video_blockstates[block_x][block_y][z];
-                                if *cur == (render_rule.id, index) {
+                                if *cur == blockstate_key {
                                     continue;
                                 }
-                                *cur = (render_rule.id, index);
-
-                                let blockstate_key = (z, subpixel_colors, index);
+                                *cur = blockstate_key;
 
                                 let state = blockstate_palette_index
                                     .entry(blockstate_key)
                                     .or_insert_with(|| {
                                         palette.push(PaletteEntry {
                                             name: format!("minecraft:{}", blockstate.block),
-                                            properties: blockstate.state.clone(),
+                                            properties: blockstate.state,
                                         });
                                         palette.len() - 1
                                     });

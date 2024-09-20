@@ -96,7 +96,7 @@ for z, subpixels in enumerate(subpixels_by_z):
             pix[x, y] = tuple(color + [255])
         im.save(f"{assets_root}/badapple/textures/block/t{next_id}.png")
 
-        dz = (2 - z) * 16 - (0.01 if z == 0 else 0)
+        dz = (2 - z) * 16 - (0.4 if z == 0 else 0)
         model_description = {
             "ambientocclusion": False,
             "elements": [
