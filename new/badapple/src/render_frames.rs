@@ -1,6 +1,6 @@
 mod types;
 
-use crate::types::{Color, Config};
+use crate::types::{Color, Config, Prediction};
 use fastnbt::{nbt, value::Value};
 use flate2::{write::GzEncoder, Compression};
 use image::RgbImage;
@@ -65,12 +65,6 @@ struct Structure {
     palette: Vec<PaletteEntry>,
     #[serde(rename = "DataVersion")]
     data_version: i32,
-}
-
-#[derive(Deserialize)]
-struct Prediction {
-    from: Vec<Color>,
-    to: Vec<Color>,
 }
 
 const STRUCTURE_SIZE: usize = 48;

@@ -24,3 +24,9 @@ pub struct ConfigSubpixels {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color(pub u8, pub u8, pub u8);
+
+#[derive(Serialize, Deserialize)]
+pub struct Prediction {
+    pub from: Vec<Color>,
+    pub to: Vec<Color>,
+}
