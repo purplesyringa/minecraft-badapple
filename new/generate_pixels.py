@@ -175,10 +175,10 @@ for z, subpixels in enumerate(subpixels_by_z):
     if z == 0:
         create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
     elif z == 3:
-        create_model(f"m{z}", z, False, rectangles)
+        create_model(f"b{z}", z, False, rectangles)
         create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
     else:
-        create_model(f"m{z}", z, False, rectangles)
+        create_model(f"b{z}", z, False, rectangles)
         create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
         create_model(f"p{z}", z, True, rectangles)
         create_model(f"c{z}", z, True, [(0, 0, 16, 16)])
@@ -197,7 +197,7 @@ for z, subpixels in enumerate(subpixels_by_z):
         if z == 0:
             prefix = "f"
         else:
-            prefix = "mfpc"[bool(prediction) * 2 + is_see_through]
+            prefix = "bfpc"[bool(prediction) * 2 + is_see_through]
 
         model_description = {
             "parent": f"{prefix}{z}",
