@@ -154,10 +154,9 @@ for z, subpixels in enumerate(subpixels_by_z):
             "textures": {}
         }
 
-        full = z == 0 and prediction
-        texture_subpixels = all_xy if full else subpixels
-        texture_colors = prediction if full else subpixel_colors
-        texture_rectangles = [(0, 0, 16, 16)] if full or is_see_through else rectangles
+        texture_subpixels = all_xy if z == 0 and prediction else subpixels
+        texture_colors = prediction if z == 0 and prediction else subpixel_colors
+        texture_rectangles = [(0, 0, 16, 16)] if z == 0 or is_see_through else rectangles
         textures.append(Texture(f"t{next_id}", texture_subpixels, texture_colors))
         for x1, y1, x2, y2 in texture_rectangles:
             model_description["elements"].append({
