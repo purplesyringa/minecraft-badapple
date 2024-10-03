@@ -174,6 +174,9 @@ for z, subpixels in enumerate(subpixels_by_z):
 
     if z == 0:
         create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
+    elif z == 3:
+        create_model(f"m{z}", z, False, rectangles)
+        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
     else:
         create_model(f"m{z}", z, False, rectangles)
         create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
