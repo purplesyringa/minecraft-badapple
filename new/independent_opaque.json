@@ -5,16 +5,16 @@ crimson_stem warped_stem {"axis":["x","y","z"]}
 stripped_crimson_hyphae stripped_crimson_stem stripped_warped_hyphae stripped_warped_stem {"axis":["x","y","z"]}
 obsidian crying_obsidian {}
 prismarine dark_prismarine {}
-daylight_detector {"inverted":["false","true"]}
+// daylight_detector {"inverted":["false","true"]}
 andesite diorite granite {}
 dirt {}
-dispenser {"facing":["down","east","north","south","up","west"]}
-enchanting_table {}
+// dispenser {"facing":["down","east","north","south","up","west"]}
+// enchanting_table {}
 fletching_table {}
-furnace blast_furnace {"facing":["east","north","south","west"]} // {"lit":["false","true"]}
+// furnace blast_furnace {"facing":["east","north","south","west"]} // {"lit":["false","true"]}
 gravel {}
 ice packed_ice blue_ice {}
-lectern {"facing":["east","north","south","west"]}
+// lectern {"facing":["east","north","south","west"]}
 loom {"facing":["east","north","south","west"]}
 end_stone {}
 gilded_blackstone {}
@@ -31,14 +31,14 @@ reinforced_deepslate {}
 respawn_anchor {} // {"charges":["0","1","2","3","4"]}
 rooted_dirt {}
 sculk {}
-sculk_shrieker {} // {"can_summon":["false","true"]}
+// sculk_shrieker {} // {"can_summon":["false","true"]}
 smithing_table {}
-smoker {"facing":["east","north","south","west"]} // {"lit":["false","true"]}
+// smoker {"facing":["east","north","south","west"]} // {"lit":["false","true"]}
 smooth_basalt {}
 smooth_quartz {}
 smooth_stone {}
 soul_soil {}
-soul_campfire campfire {"facing":["east","north","south","west"],"lit":["false"]}
+// soul_campfire campfire {"facing":["east","north","south","west"],"lit":["false"]}
 // stone {}
 target {}
 tuff {}
@@ -52,9 +52,8 @@ polished_blackstone {}
 polished_deepslate {}
 polished_tuff {}
 tinted_glass {}
-suspicious_gravel {} // {"dusted":["0","1","2","3"]}
+// suspicious_gravel suspicious_sand {} // {"dusted":["0","1","2","3"]}
 red_sand sand soul_sand {}
-suspicious_sand {} // {"dusted":["0","1","2","3"]}
 cut_red_sandstone cut_sandstone {}
 red_sandstone sandstone {}
 smooth_red_sandstone smooth_sandstone {}
@@ -75,7 +74,7 @@ dripstone_block {}
 hay_block {"axis":["x","y","z"]}
 honeycomb_block {}
 lapis_block {}
-magma_block {}
+// magma_block {}
 moss_block {}
 netherite_block {}
 nether_wart_block {}
@@ -115,10 +114,10 @@ amethyst_block {}
 ancient_debris {}
 bamboo_block {"axis":["x","y","z"]}
 bamboo_mosaic {}
-barrel {"facing":["down","east","north","south","up","west"]} // "open":["false","true"]
+// barrel {"facing":["down","east","north","south","up","west"]} // "open":["false","true"]
 basalt {"axis":["x","y","z"]}
 bedrock {}
-beehive bee_nest {"facing":["east","north","south","west"],"honey_level":["0","1","2","3","4","5"]}
+// beehive bee_nest {"facing":["east","north","south","west"],"honey_level":["0","1","2","3","4","5"]}
 bone_block {"axis":["x","y","z"]}
 bookshelf {}
 bricks {}
@@ -128,3 +127,11 @@ stripped_acacia_wood stripped_birch_wood stripped_cherry_wood stripped_dark_oak_
 mangrove_roots {}
 muddy_mangrove_roots {"axis":["x","y","z"]}
 stonecutter {"facing":["east","north","south","west"]}
+black_glazed_terracotta blue_glazed_terracotta brown_glazed_terracotta cyan_glazed_terracotta gray_glazed_terracotta green_glazed_terracotta light_blue_glazed_terracotta light_gray_glazed_terracotta lime_glazed_terracotta magenta_glazed_terracotta orange_glazed_terracotta pink_glazed_terracotta purple_glazed_terracotta red_glazed_terracotta white_glazed_terracotta yellow_glazed_terracotta {"facing":["east","north","south","west"]}
+brown_mushroom_block/red_mushroom_block {"down":["true","false"],"east":["true","false"],"north":["true","false"],"south":["true","false"],"up":["true","false"],"west":["true","false"]}
+// crafter {"orientation":["down_east","down_north","down_south","down_west","east_up","north_up","south_up","up_east","up_north","up_south","up_west","west_up"]} // "crafting":["false","true"],"triggered":["false","true"]}
+black_concrete blue_concrete brown_concrete cyan_concrete gray_concrete green_concrete light_blue_concrete light_gray_concrete lime_concrete magenta_concrete orange_concrete pink_concrete purple_concrete red_concrete white_concrete yellow_concrete {}
+black_concrete_powder blue_concrete_powder brown_concrete_powder cyan_concrete_powder gray_concrete_powder green_concrete_powder light_blue_concrete_powder light_gray_concrete_powder lime_concrete_powder magenta_concrete_powder orange_concrete_powder pink_concrete_powder purple_concrete_powder red_concrete_powder white_concrete_powder yellow_concrete_powder {}
+terracotta black_terracotta blue_terracotta brown_terracotta cyan_terracotta gray_terracotta green_terracotta light_blue_terracotta light_gray_terracotta lime_terracotta magenta_terracotta orange_terracotta pink_terracotta purple_terracotta red_terracotta white_terracotta yellow_terracotta {}
+black_wool blue_wool brown_wool cyan_wool gray_wool green_wool light_blue_wool light_gray_wool lime_wool magenta_wool orange_wool pink_wool purple_wool red_wool white_wool yellow_wool {}
+blackstone {}
