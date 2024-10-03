@@ -63,8 +63,8 @@ for kind in ["opaque", "transparent"]:
 for relative_path in [
     "minecraft/atlases",
     "minecraft/blockstates",
-    "minecraft/textures",
-    "badapple/models"
+    "minecraft/models",
+    "minecraft/textures"
 ]:
     path = f"{assets_root}/{relative_path}"
     try:
@@ -78,6 +78,43 @@ subpixels_by_z: list[tuple[int, int]] = [[] for _ in range(4)]
 for y, row in enumerate(config["subpixels"]["distribution"]):
     for x, z in enumerate(row):
         subpixels_by_z[z].append((x, y))
+
+
+def create_model(
+    name: str,
+    z: int,
+    has_prediction: bool,
+    rectangles: list[tuple[float, float, float, float]]
+):
+    dz = (2 - z) * 16 + (0 if z == 0 else 0.6)
+
+    model_description = {
+        "ambientocclusion": False,
+        "elements": []
+    }
+
+    for x1, y1, x2, y2 in rectangles:
+        model_description["elements"].append({
+            "from": [x1, y1, dz],
+            "to": [x2, y2, dz],
+            "shade": False,
+            "faces": {
+                "south": {"texture": "#t"}
+            }
+        })
+
+    if z > 0 and has_prediction:
+        model_description["elements"].append({
+            "from": [0, 0, dz - 1.2],
+            "to": [16, 16, dz - 1.2],
+            "shade": False,
+            "faces": {
+                "south": {"texture": "#p"}
+            }
+        })
+
+    with open(f"{assets_root}/minecraft/models/{name}.json", "w") as f:
+        json.dump(model_description, f, separators=(",", ":"))
 
 
 Color = list[int]
@@ -111,7 +148,7 @@ for z, subpixels in enumerate(subpixels_by_z):
     catalogue = catalogue_by_kind[kind]
 
     # Split subpixels into rectangles
-    rectangles = []
+    rectangles: list[tuple[float, float, float, float]] = []
     grid = [[False] * subpixels_width for _ in range(subpixels_height)]
     for x, y in subpixels:
         grid[y][x] = True
@@ -135,53 +172,45 @@ for z, subpixels in enumerate(subpixels_by_z):
                 (1 - y1 / subpixels_height) * 16
             ))
 
+    if z == 0:
+        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
+    else:
+        create_model(f"m{z}", z, False, rectangles)
+        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
+        create_model(f"p{z}", z, True, rectangles)
+        create_model(f"c{z}", z, True, [(0, 0, 16, 16)])
+
     for subpixel_colors in itertools.product(config["colors"], repeat=len(subpixels)):
         key = tuple(map(tuple, subpixel_colors))
         prediction = None if z == 3 else predictions[z].get(key)
 
-        model_location = f"badapple:m{next_id}"
+        model_location = f"m{next_id}"
 
         blockstates, is_see_through = catalogue.pop()
         for (block, state) in blockstates:
             block_to_variants[block].append((state, model_location))
         render_rules.append(RenderRule(z, subpixel_colors, prediction, blockstates))
 
-        dz = (2 - z) * 16 + (0 if z == 0 else 0.6)
+        if z == 0:
+            prefix = "f"
+        else:
+            prefix = "mfpc"[bool(prediction) * 2 + is_see_through]
 
         model_description = {
-            "ambientocclusion": False,
-            "elements": [],
+            "parent": f"{prefix}{z}",
             "textures": {}
         }
 
         texture_subpixels = all_xy if z == 0 and prediction else subpixels
         texture_colors = prediction if z == 0 and prediction else subpixel_colors
-        texture_rectangles = [(0, 0, 16, 16)] if z == 0 or is_see_through else rectangles
         textures.append(Texture(f"t{next_id}", texture_subpixels, texture_colors))
-        for x1, y1, x2, y2 in texture_rectangles:
-            model_description["elements"].append({
-                "from": [x1, y1, dz],
-                "to": [x2, y2, dz],
-                "shade": False,
-                "faces": {
-                    "south": {"texture": "#t"}
-                }
-            })
-        model_description["textures"]["t"] = f"minecraft:t{next_id}"
+        model_description["textures"]["t"] = f"t{next_id}"
 
         if z > 0 and prediction:
             textures.append(Texture(f"p{next_id}", all_xy, prediction))
-            model_description["elements"].append({
-                "from": [0, 0, dz - 1.2],
-                "to": [16, 16, dz - 1.2],
-                "shade": False,
-                "faces": {
-                    "south": {"texture": "#p"}
-                }
-            })
-            model_description["textures"]["p"] = f"minecraft:p{next_id}"
+            model_description["textures"]["p"] = f"p{next_id}"
 
-        with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
+        with open(f"{assets_root}/minecraft/models/m{next_id}.json", "w") as f:
             json.dump(model_description, f, separators=(",", ":"))
 
         next_id += 1
