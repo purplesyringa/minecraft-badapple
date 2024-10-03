@@ -5,6 +5,7 @@ import json
 import os
 from PIL import Image
 import shutil
+from typing import Optional
 
 
 NBT = dict[str, str]
@@ -36,10 +37,11 @@ with open("config.json") as f:
 
 
 with open("subpixel_predictions.json") as f:
-    predictions: dict[tuple[tuple[int, int, int]], list[list[int]]] = {}
-    for prediction in json.load(f):
-        key = tuple(map(tuple, prediction["from"]))
-        predictions[key] = prediction["to"]
+    predictions: list[dict[tuple[tuple[int, int, int]], list[list[int]]]] = [{} for _ in range(3)]
+    for z, z_predictions in enumerate(json.load(f)):
+        for prediction in z_predictions:
+            key = tuple(map(tuple, prediction["from"]))
+            predictions[z][key] = prediction["to"]
 
 
 catalogue_by_kind: dict[str, Catalogue] = {}
@@ -64,39 +66,41 @@ for y, row in enumerate(config["subpixels"]["distribution"]):
         subpixels_by_z[z].append((x, y))
 
 
+def generate_texture(subpixels: list[tuple[int, int]], colors: list[tuple[int, int, int]], name: str):
+    im = Image.new("RGBA", (config["subpixels"]["width"], config["subpixels"]["height"]))
+    pix = im.load()
+    for (x, y), color in zip(subpixels, colors):
+        pix[x, y] = tuple(color + [255])
+    im.save(f"{assets_root}/badapple/textures/block/{name}.png")
+
+
 Color = list[int]
 
 @dataclasses.dataclass
 class RenderRule:
     z: int
     subpixel_colors: list[Color]
+    prediction: Optional[list[tuple[int, int, int]]]
     blockstates: EquivalentBlockStates
 
 next_id = 0
 block_to_variants: defaultdict[str, list[tuple[NBT, str]]] = defaultdict(list)
 render_rules: list[RenderRule] = []
+all_xy: list[tuple[int, int]] = [
+    (x, y)
+    for y in range(config["subpixels"]["height"])
+    for x in range(config["subpixels"]["width"])
+]
 
 for z, subpixels in enumerate(subpixels_by_z):
     kind = "opaque" if z == 0 else "transparent"
     catalogue = catalogue_by_kind[kind]
 
     for subpixel_colors in itertools.product(config["colors"], repeat=len(subpixels)):
-        im = Image.new("RGBA", (config["subpixels"]["width"], config["subpixels"]["height"]))
-        pix = im.load()
-        if z == 0:
-            key = tuple(map(tuple, subpixel_colors))
-            prediction = predictions.get(key)
-            if prediction:
-                for (y, x), color in zip(
-                    itertools.product(range(im.height), range(im.width)),
-                    prediction
-                ):
-                    pix[x, y] = tuple(color + [255])
-        for (x, y), color in zip(subpixels, subpixel_colors):
-            pix[x, y] = tuple(color + [255])
-        im.save(f"{assets_root}/badapple/textures/block/t{next_id}.png")
+        key = tuple(map(tuple, subpixel_colors))
+        prediction = None if z == 3 else predictions[z].get(key)
 
-        dz = (2 - z) * 16 - (0.4 if z == 0 else 0)
+        dz = (2 - z) * 16 + (0 if z == 0 else 0.4)
         model_description = {
             "ambientocclusion": False,
             "elements": [
@@ -105,14 +109,34 @@ for z, subpixels in enumerate(subpixels_by_z):
                     "to": [16, 16, dz],
                     "shade": False,
                     "faces": {
-                        "south": {"texture": "#front"}
+                        "south": {"texture": "#t"}
                     }
                 }
             ],
             "textures": {
-                "front": f"badapple:block/t{next_id}",
+                "t": f"badapple:block/t{next_id}",
             }
         }
+
+        if z == 0:
+            if prediction:
+                generate_texture(all_xy, prediction, f"t{next_id}")
+            else:
+                generate_texture(subpixels, subpixel_colors, f"t{next_id}")
+        else:
+            generate_texture(subpixels, subpixel_colors, f"t{next_id}")
+            if prediction:
+                generate_texture(all_xy, prediction, f"p{next_id}")
+                model_description["elements"].append({
+                    "from": [0, 0, dz - 0.8],
+                    "to": [16, 16, dz - 0.8],
+                    "shade": False,
+                    "faces": {
+                        "south": {"texture": "#p"}
+                    }
+                })
+                model_description["textures"]["p"] = f"badapple:block/p{next_id}"
+
         with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
             json.dump(model_description, f, separators=(",", ":"))
         model_location = f"badapple:m{next_id}"
@@ -122,7 +146,7 @@ for z, subpixels in enumerate(subpixels_by_z):
         blockstates = catalogue.pop()
         for (block, state) in blockstates:
             block_to_variants[block].append((state, model_location))
-        render_rules.append(RenderRule(z, subpixel_colors, blockstates))
+        render_rules.append(RenderRule(z, subpixel_colors, prediction, blockstates))
 
 
 with open("render_rules.json", "w") as f:

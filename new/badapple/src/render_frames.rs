@@ -21,7 +21,7 @@ struct BlockState {
 
 type EquivalentBlockStates = Vec<BlockState>;
 
-#[derive(Deserialize, PartialEq, Eq, Hash)]
+#[derive(Deserialize, PartialEq, Eq, Hash, Clone)]
 struct RenderRuleKey {
     z: usize,
     subpixel_colors: Vec<Color>,
@@ -31,6 +31,7 @@ struct RenderRuleKey {
 struct RenderRule {
     #[serde(flatten)]
     key: RenderRuleKey,
+    prediction: Option<Vec<Color>>,
     blockstates: EquivalentBlockStates,
 }
 
@@ -91,11 +92,15 @@ fn main() {
     }
 
     let mut render_rules = HashMap::new();
+    let mut fully_predicted_pixels: HashMap<Vec<Color>, usize> = HashMap::new();
     for render_rule in serde_json::from_str::<Vec<RenderRule>>(
         &std::fs::read_to_string("../render_rules.json").expect("Failed to read render_rules.json"),
     )
     .expect("Invalid render rules")
     {
+        if let Some(prediction) = render_rule.prediction {
+            fully_predicted_pixels.insert(prediction, render_rule.key.z);
+        }
         render_rules.insert(
             render_rule.key,
             ParsedRenderRule {
@@ -105,14 +110,15 @@ fn main() {
         );
     }
 
-    let subpixel_predictions: HashMap<Vec<Color>, Vec<Color>> =
-        serde_json::from_str::<Vec<Prediction>>(
-            &std::fs::read_to_string("../subpixel_predictions.json")
-                .expect("Failed to read subpixel_predictions.json"),
-        )
-        .expect("Invalid subpixel predictions")
-        .into_iter()
-        .map(|prediction| (prediction.from, prediction.to))
+    let subpixel_predictions: [Vec<Prediction>; 3] = serde_json::from_str(
+        &std::fs::read_to_string("../subpixel_predictions.json")
+            .expect("Failed to read subpixel_predictions.json"),
+    )
+    .expect("Invalid subpixel predictions");
+
+    let z0_subpixel_predictions: HashMap<Vec<Color>, Vec<Color>> = subpixel_predictions[0]
+        .iter()
+        .map(|prediction| (prediction.from.clone(), prediction.to.clone()))
         .collect();
 
     let mut current_video_blockstates: Vec<Vec<[(usize, usize); 4]>> = (0..block_width)
@@ -238,6 +244,7 @@ fn main() {
                                 block_height - 1 - (megapixel_y * STRUCTURE_SIZE + relative_y);
 
                             let mut subpixel_colors_by_z = [const { Vec::new() }; 4];
+                            let mut all_subpixel_colors = Vec::new();
                             for relative_subpixel_y in 0..config.subpixels.height {
                                 for relative_subpixel_x in 0..config.subpixels.width {
                                     let z = config.subpixels.distribution[relative_subpixel_y]
@@ -252,26 +259,35 @@ fn main() {
                                     let color = Color(pixel.0[0], pixel.0[1], pixel.0[2]);
 
                                     subpixel_colors_by_z[z].push(color);
+                                    all_subpixel_colors.push(color);
                                 }
                             }
 
-                            let prediction = subpixel_predictions.get(&subpixel_colors_by_z[0]);
+                            let full_prediction = fully_predicted_pixels.get(&all_subpixel_colors);
+                            let z0_prediction =
+                                z0_subpixel_predictions.get(&subpixel_colors_by_z[0]);
 
                             for (z, subpixel_colors) in subpixel_colors_by_z.into_iter().enumerate()
                             {
+                                let is_barrier = match full_prediction {
+                                    Some(pred_z) => z != *pred_z,
+                                    None => {
+                                        z > 0
+                                            && z0_prediction.is_some_and(|z0_prediction| {
+                                                subpixel_colors.iter().zip(&subpixels_by_z[z]).all(
+                                                    |(color, (x, y))| {
+                                                        *color
+                                                            == z0_prediction
+                                                                [y * config.subpixels.height + x]
+                                                    },
+                                                )
+                                            })
+                                    }
+                                };
+
                                 let blockstate;
                                 let blockstate_key;
-
-                                if z > 0
-                                    && prediction.is_some_and(|prediction| {
-                                        subpixel_colors.iter().zip(&subpixels_by_z[z]).all(
-                                            |(color, (x, y))| {
-                                                *color
-                                                    == prediction[y * config.subpixels.height + x]
-                                            },
-                                        )
-                                    })
-                                {
+                                if is_barrier {
                                     blockstate = BlockState {
                                         block: "barrier".to_string(),
                                         state: NBT(HashMap::new()),

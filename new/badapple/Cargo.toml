@@ -21,7 +21,3 @@ path = "src/render_frames.rs"
 [[bin]]
 name = "predict_subpixel_colors"
 path = "src/predict_subpixel_colors.rs"
-
-[[bin]]
-name = "find_common_unpredictable_pixels"
-path = "src/find_common_unpredictable_pixels.rs"

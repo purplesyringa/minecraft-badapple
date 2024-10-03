@@ -7,6 +7,7 @@ pub struct Config {
     pub subpixels: ConfigSubpixels,
     pub frames_root: PathBuf,
     pub structures_root: String,
+    pub colors: Vec<Color>,
 }
 
 #[derive(Deserialize)]
