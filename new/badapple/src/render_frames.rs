@@ -160,7 +160,7 @@ fn main() {
                     pos: Coordinates(4 * parity as i32, 0, 0),
                     state: 0,
                     nbt: Some(nbt!({
-                        "id": "minecraft:structure_block",
+                        "id": "structure_block",
                         "author": "purplesyringa",
                         "ignoreEntities": 1i8,
                         "integrity": 1.0f32,
@@ -191,11 +191,11 @@ fn main() {
 
                 let mut palette = vec![
                     PaletteEntry {
-                        name: "minecraft:structure_block".to_string(),
+                        name: "structure_block".to_string(),
                         properties: Some(NBT([("mode".to_string(), "load".to_string())].into())),
                     },
                     PaletteEntry {
-                        name: "minecraft:repeater".to_string(),
+                        name: "repeater".to_string(),
                         properties: Some(NBT([
                             ("delay", "1"),
                             ("facing", ["east", "south"][half_parity]),
@@ -206,11 +206,11 @@ fn main() {
                         .into())),
                     },
                     PaletteEntry {
-                        name: "minecraft:air".to_string(),
+                        name: "air".to_string(),
                         properties: None,
                     },
                     PaletteEntry {
-                        name: "minecraft:stone".to_string(),
+                        name: "stone".to_string(),
                         properties: None,
                     },
                 ];
@@ -314,7 +314,7 @@ fn main() {
                                     .entry(blockstate_key)
                                     .or_insert_with(|| {
                                         palette.push(PaletteEntry {
-                                            name: format!("minecraft:{}", blockstate.block),
+                                            name: blockstate.block,
                                             properties: if blockstate.state.0.is_empty() {
                                                 None
                                             } else {
