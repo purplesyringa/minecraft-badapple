@@ -45,7 +45,6 @@ tuff {}
 cauldron {}
 water_cauldron {"level":["1","2","3"]}
 powder_snow_cauldron {"level":["1","2","3"]}
-wet_sponge {}
 polished_andesite polished_diorite polished_granite {}
 polished_basalt {"axis":["x","y","z"]}
 polished_blackstone {}
