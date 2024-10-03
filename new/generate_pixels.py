@@ -11,7 +11,7 @@ from typing import Optional
 NBT = dict[str, str]
 BlockState = tuple[str, NBT]
 EquivalentBlockStates = list[BlockState]
-Catalogue = list[EquivalentBlockStates]
+Catalogue = list[tuple[EquivalentBlockStates, bool]]
 
 
 def parse_catalogue(data: str) -> Catalogue:
@@ -23,10 +23,17 @@ def parse_catalogue(data: str) -> Catalogue:
             continue
         states = json.loads(block_groups.pop())
 
+        is_see_through = block_groups[0] == "[seethrough]"
+        if is_see_through:
+            block_groups.pop(0)
+
         for values in itertools.product(*states.values()):
             state = dict(zip(states.keys(), values))
             for equivalent_blocks in block_groups:
-                catalogue.append([(block, state) for block in equivalent_blocks.split("/")])
+                catalogue.append((
+                    [(block, state) for block in equivalent_blocks.split("/")],
+                    is_see_through
+                ))
 
     return catalogue
 
@@ -103,57 +110,82 @@ for z, subpixels in enumerate(subpixels_by_z):
     kind = "opaque" if z == 0 else "transparent"
     catalogue = catalogue_by_kind[kind]
 
+    # Split subpixels into rectangles
+    rectangles = []
+    grid = [[False] * subpixels_width for _ in range(subpixels_height)]
+    for x, y in subpixels:
+        grid[y][x] = True
+    for y1 in range(subpixels_height):
+        for x1 in range(subpixels_width):
+            if not grid[y1][x1]:
+                continue
+            x2 = x1 + 1
+            while x2 < subpixels_width and grid[y1][x2]:
+                x2 += 1
+            y2 = y1 + 1
+            while y2 < subpixels_height and all(grid[y2][x1:x2]):
+                y2 += 1
+            for y in range(y1, y2):
+                for x in range(x1, x2):
+                    grid[y][x] = False
+            rectangles.append((
+                x1 / subpixels_width * 16,
+                (1 - y2 / subpixels_height) * 16,
+                x2 / subpixels_width * 16,
+                (1 - y1 / subpixels_height) * 16
+            ))
+
     for subpixel_colors in itertools.product(config["colors"], repeat=len(subpixels)):
         key = tuple(map(tuple, subpixel_colors))
         prediction = None if z == 3 else predictions[z].get(key)
 
-        dz = (2 - z) * 16 + (0 if z == 0 else 0.4)
-        model_description = {
-            "ambientocclusion": False,
-            "elements": [
-                {
-                    "from": [0, 0, dz],
-                    "to": [16, 16, dz],
-                    "shade": False,
-                    "faces": {
-                        "south": {"texture": "#t"}
-                    }
-                }
-            ],
-            "textures": {
-                "t": f"minecraft:t{next_id}",
-            }
-        }
-
-        if z == 0:
-            if prediction:
-                textures.append(Texture(f"t{next_id}", all_xy, prediction))
-            else:
-                textures.append(Texture(f"t{next_id}", subpixels, subpixel_colors))
-        else:
-            textures.append(Texture(f"t{next_id}", subpixels, subpixel_colors))
-            if prediction:
-                textures.append(Texture(f"p{next_id}", all_xy, prediction))
-                model_description["elements"].append({
-                    "from": [0, 0, dz - 0.8],
-                    "to": [16, 16, dz - 0.8],
-                    "shade": False,
-                    "faces": {
-                        "south": {"texture": "#p"}
-                    }
-                })
-                model_description["textures"]["p"] = f"minecraft:p{next_id}"
-
-        with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
-            json.dump(model_description, f, separators=(",", ":"))
         model_location = f"badapple:m{next_id}"
 
-        next_id += 1
-
-        blockstates = catalogue.pop()
+        blockstates, is_see_through = catalogue.pop()
         for (block, state) in blockstates:
             block_to_variants[block].append((state, model_location))
         render_rules.append(RenderRule(z, subpixel_colors, prediction, blockstates))
+
+        dz = (2 - z) * 16 + (0 if z == 0 else 0.4)
+
+        model_description = {
+            "ambientocclusion": False,
+            "elements": [],
+            "textures": {}
+        }
+
+        full = z == 0 and prediction
+        texture_subpixels = all_xy if full else subpixels
+        texture_colors = prediction if full else subpixel_colors
+        texture_rectangles = [(0, 0, 16, 16)] if full or is_see_through else rectangles
+        textures.append(Texture(f"t{next_id}", texture_subpixels, texture_colors))
+        for x1, y1, x2, y2 in texture_rectangles:
+            model_description["elements"].append({
+                "from": [x1, y1, dz],
+                "to": [x2, y2, dz],
+                "shade": False,
+                "faces": {
+                    "south": {"texture": "#t"}
+                }
+            })
+        model_description["textures"]["t"] = f"minecraft:t{next_id}"
+
+        if z > 0 and prediction:
+            textures.append(Texture(f"p{next_id}", all_xy, prediction))
+            model_description["elements"].append({
+                "from": [0, 0, dz - 0.8],
+                "to": [16, 16, dz - 0.8],
+                "shade": False,
+                "faces": {
+                    "south": {"texture": "#p"}
+                }
+            })
+            model_description["textures"]["p"] = f"minecraft:p{next_id}"
+
+        with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
+            json.dump(model_description, f, separators=(",", ":"))
+
+        next_id += 1
 
 
 with open("render_rules.json", "w") as f:
