@@ -46,7 +46,7 @@ struct Coordinates(i32, i32, i32);
 #[derive(Serialize)]
 struct BlockInfo {
     pos: Coordinates,
-    state: i32,
+    state: i16,
     nbt: Option<Value>,
 }
 
@@ -330,7 +330,7 @@ fn main() {
                                         relative_y as i32,
                                         3 + z as i32,
                                     ),
-                                    state: *state as i32,
+                                    state: (*state).try_into().expect("too many states"),
                                     nbt: None,
                                 });
                             }
