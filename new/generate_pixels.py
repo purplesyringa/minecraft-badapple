@@ -34,6 +34,8 @@ def parse_catalogue(data: str) -> Catalogue:
 with open("config.json") as f:
     config = json.load(f)
     assets_root = config["assets_root"]
+    subpixels_width = config["subpixels"]["width"]
+    subpixels_height = config["subpixels"]["height"]
 
 
 with open("subpixel_predictions.json") as f:
@@ -51,7 +53,12 @@ for kind in ["opaque", "transparent"]:
         catalogue_by_kind[kind] = parse_catalogue(f.read())[::-1]
 
 
-for relative_path in ["minecraft/blockstates", "badapple/models", "badapple/textures/block"]:
+for relative_path in [
+    "minecraft/atlases",
+    "minecraft/blockstates",
+    "minecraft/textures",
+    "badapple/models"
+]:
     path = f"{assets_root}/{relative_path}"
     try:
         shutil.rmtree(path)
@@ -64,14 +71,6 @@ subpixels_by_z: list[tuple[int, int]] = [[] for _ in range(4)]
 for y, row in enumerate(config["subpixels"]["distribution"]):
     for x, z in enumerate(row):
         subpixels_by_z[z].append((x, y))
-
-
-def generate_texture(subpixels: list[tuple[int, int]], colors: list[tuple[int, int, int]], name: str):
-    im = Image.new("RGBA", (config["subpixels"]["width"], config["subpixels"]["height"]))
-    pix = im.load()
-    for (x, y), color in zip(subpixels, colors):
-        pix[x, y] = tuple(color + [255])
-    im.save(f"{assets_root}/badapple/textures/block/{name}.png")
 
 
 Color = list[int]
@@ -88,9 +87,17 @@ block_to_variants: defaultdict[str, list[tuple[NBT, str]]] = defaultdict(list)
 render_rules: list[RenderRule] = []
 all_xy: list[tuple[int, int]] = [
     (x, y)
-    for y in range(config["subpixels"]["height"])
-    for x in range(config["subpixels"]["width"])
+    for y in range(subpixels_height)
+    for x in range(subpixels_width)
 ]
+
+@dataclasses.dataclass
+class Texture:
+    name: str
+    subpixels: list[tuple[int, int]]
+    colors: list[tuple[int, int, int]]
+
+textures: list[Texture] = []
 
 for z, subpixels in enumerate(subpixels_by_z):
     kind = "opaque" if z == 0 else "transparent"
@@ -114,19 +121,19 @@ for z, subpixels in enumerate(subpixels_by_z):
                 }
             ],
             "textures": {
-                "t": f"badapple:block/t{next_id}",
+                "t": f"minecraft:t{next_id}",
             }
         }
 
         if z == 0:
             if prediction:
-                generate_texture(all_xy, prediction, f"t{next_id}")
+                textures.append(Texture(f"t{next_id}", all_xy, prediction))
             else:
-                generate_texture(subpixels, subpixel_colors, f"t{next_id}")
+                textures.append(Texture(f"t{next_id}", subpixels, subpixel_colors))
         else:
-            generate_texture(subpixels, subpixel_colors, f"t{next_id}")
+            textures.append(Texture(f"t{next_id}", subpixels, subpixel_colors))
             if prediction:
-                generate_texture(all_xy, prediction, f"p{next_id}")
+                textures.append(Texture(f"p{next_id}", all_xy, prediction))
                 model_description["elements"].append({
                     "from": [0, 0, dz - 0.8],
                     "to": [16, 16, dz - 0.8],
@@ -135,7 +142,7 @@ for z, subpixels in enumerate(subpixels_by_z):
                         "south": {"texture": "#p"}
                     }
                 })
-                model_description["textures"]["p"] = f"badapple:block/p{next_id}"
+                model_description["textures"]["p"] = f"minecraft:p{next_id}"
 
         with open(f"{assets_root}/badapple/models/m{next_id}.json", "w") as f:
             json.dump(model_description, f, separators=(",", ":"))
@@ -165,3 +172,37 @@ for block, variants in block_to_variants.items():
 
     with open(f"{assets_root}/minecraft/blockstates/{block}.json", "w") as f:
         json.dump(blockstates_description, f, separators=(",", ":"))
+
+
+im = Image.new("RGBA", (subpixels_width * len(textures), subpixels_height))
+pix = im.load()
+
+for i, texture in enumerate(textures):
+    for (x, y), color in zip(texture.subpixels, texture.colors):
+        pix[x + i * subpixels_width, y] = tuple(color + [255])
+
+im.save(f"{assets_root}/minecraft/textures/badapple.png")
+
+atlas = {
+    "sources": [
+        {
+            "type": "unstitch",
+            "resource": "badapple",
+            "divisor_x": len(textures),
+            "divisor_y": 1,
+            "regions": [
+                {
+                    "sprite": texture.name,
+                    "x": i,
+                    "y": 0,
+                    "width": 1,
+                    "height": 1
+                }
+                for i, texture in enumerate(textures)
+            ]
+        }
+    ]
+}
+
+with open(f"{assets_root}/minecraft/atlases/blocks.json", "w") as f:
+    json.dump(atlas, f, separators=(",", ":"))
