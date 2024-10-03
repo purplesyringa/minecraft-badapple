@@ -146,7 +146,7 @@ for z, subpixels in enumerate(subpixels_by_z):
             block_to_variants[block].append((state, model_location))
         render_rules.append(RenderRule(z, subpixel_colors, prediction, blockstates))
 
-        dz = (2 - z) * 16 + (0 if z == 0 else 0.4)
+        dz = (2 - z) * 16 + (0 if z == 0 else 0.6)
 
         model_description = {
             "ambientocclusion": False,
@@ -173,8 +173,8 @@ for z, subpixels in enumerate(subpixels_by_z):
         if z > 0 and prediction:
             textures.append(Texture(f"p{next_id}", all_xy, prediction))
             model_description["elements"].append({
-                "from": [0, 0, dz - 0.8],
-                "to": [16, 16, dz - 0.8],
+                "from": [0, 0, dz - 1.2],
+                "to": [16, 16, dz - 1.2],
                 "shade": False,
                 "faces": {
                     "south": {"texture": "#p"}
