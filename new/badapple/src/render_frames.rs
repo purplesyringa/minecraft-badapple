@@ -55,7 +55,7 @@ struct PaletteEntry {
     #[serde(rename = "Name")]
     name: String,
     #[serde(rename = "Properties")]
-    properties: NBT,
+    properties: Option<NBT>,
 }
 
 #[derive(Serialize)]
@@ -192,26 +192,26 @@ fn main() {
                 let mut palette = vec![
                     PaletteEntry {
                         name: "minecraft:structure_block".to_string(),
-                        properties: NBT([("mode".to_string(), "load".to_string())].into()),
+                        properties: Some(NBT([("mode".to_string(), "load".to_string())].into())),
                     },
                     PaletteEntry {
                         name: "minecraft:repeater".to_string(),
-                        properties: NBT([
+                        properties: Some(NBT([
                             ("delay", "1"),
                             ("facing", ["east", "south"][half_parity]),
                             ("locked", "false"),
                             ("powered", "false"),
                         ]
                         .map(|(key, value)| (key.into(), value.into()))
-                        .into()),
+                        .into())),
                     },
                     PaletteEntry {
                         name: "minecraft:air".to_string(),
-                        properties: NBT(HashMap::new()),
+                        properties: None,
                     },
                     PaletteEntry {
                         name: "minecraft:stone".to_string(),
-                        properties: NBT(HashMap::new()),
+                        properties: None,
                     },
                 ];
 
@@ -315,7 +315,11 @@ fn main() {
                                     .or_insert_with(|| {
                                         palette.push(PaletteEntry {
                                             name: format!("minecraft:{}", blockstate.block),
-                                            properties: blockstate.state,
+                                            properties: if blockstate.state.0.is_empty() {
+                                                None
+                                            } else {
+                                                Some(blockstate.state)
+                                            },
                                         });
                                         palette.len() - 1
                                     });
