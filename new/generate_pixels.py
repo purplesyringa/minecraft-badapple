@@ -84,9 +84,11 @@ def create_model(
     name: str,
     z: int,
     has_prediction: bool,
-    rectangles: list[tuple[float, float, float, float]]
+    rectangles: list[tuple[float, float, float, float]],
+    x_border: list[tuple[float, float, float, bool]],
+    y_border: list[tuple[float, float, float, bool]]
 ):
-    dz = (2 - z) * 16 + (0 if z == 0 else 0.6)
+    dz = (2 - z) * 16
 
     model_description = {
         "ambientocclusion": False,
@@ -95,26 +97,137 @@ def create_model(
 
     for x1, y1, x2, y2 in rectangles:
         model_description["elements"].append({
-            "from": [x1, y1, dz],
-            "to": [x2, y2, dz],
+            "from": [x1, y1, dz + (0 if z == 0 else 0.5)],
+            "to": [x2, y2, dz + (0 if z == 0 else 0.5)],
             "shade": False,
             "faces": {
                 "south": {"texture": "#t"}
             }
         })
 
+    if z > 0:
+        one = 16 / subpixels_width
+        for x, y1, y2, is_positive in x_border:
+            if is_positive:
+                direction = "west"
+                tx = x + one / 2
+            else:
+                direction = "east"
+                tx = x - one / 2
+            model_description["elements"].append({
+                "from": [x, 16 - y2, dz],
+                "to": [x, 16 - y1, dz + 0.5],
+                "shade": False,
+                "faces": {
+                    direction: {
+                        "texture": "#t",
+                        "uv": [tx, y1, tx, y2]
+                    }
+                }
+            })
+
+        one = 16 / subpixels_height
+        for y, x1, x2, is_positive in y_border:
+            if is_positive:
+                direction = "up"
+                ty = y + one / 2
+            else:
+                direction = "down"
+                ty = y - one / 2
+            model_description["elements"].append({
+                "from": [x1, 16 - y, dz],
+                "to": [x2, 16 - y, dz + 0.5],
+                "shade": False,
+                "faces": {
+                    direction: {
+                        "texture": "#t",
+                        "uv": [x1, ty, x2, ty]
+                    }
+                }
+            })
+
     if z > 0 and has_prediction:
-        model_description["elements"].append({
-            "from": [0, 0, dz - 1.2],
-            "to": [16, 16, dz - 1.2],
-            "shade": False,
-            "faces": {
-                "south": {"texture": "#p"}
+        model_description["elements"] += [
+            {
+                "from": [0, 0, dz - 0.5],
+                "to": [16, 16, dz - 0.5],
+                "shade": False,
+                "faces": {
+                    "south": {"texture": "#p"}
+                }
+            },
+            {
+                "from": [0, 0, dz - 0.5],
+                "to": [0, 16, dz],
+                "shade": False,
+                "faces": {
+                    "east": {
+                        "texture": "#p",
+                        "uv": [8 / subpixels_width, 0, 8 / subpixels_width, 16]
+                    }
+                }
+            },
+            {
+                "from": [16, 0, dz - 0.5],
+                "to": [16, 16, dz],
+                "shade": False,
+                "faces": {
+                    "west": {
+                        "texture": "#p",
+                        "uv": [16 - 8 / subpixels_width, 0, 16 - 8 / subpixels_width, 16]
+                    }
+                }
+            },
+            {
+                "from": [0, 16, dz - 0.5],
+                "to": [16, 16, dz],
+                "shade": False,
+                "faces": {
+                    "down": {
+                        "texture": "#p",
+                        "uv": [0, 8 / subpixels_height, 16, 8 / subpixels_height]
+                    }
+                }
+            },
+            {
+                "from": [0, 0, dz - 0.5],
+                "to": [16, 0, dz],
+                "shade": False,
+                "faces": {
+                    "up": {
+                        "texture": "#p",
+                        "uv": [0, 16 - 8 / subpixels_height, 16, 16 - 8 / subpixels_height]
+                    }
+                }
             }
-        })
+        ]
 
     with open(f"{assets_root}/minecraft/models/{name}.json", "w") as f:
         json.dump(model_description, f, separators=(",", ":"))
+
+
+def detect_x_border(grid: list[list[bool]]) -> list[tuple[float, float, float, bool]]:
+    width = len(grid[0])
+    height = len(grid)
+    sx = 16 / width
+    sy = 16 / height
+    border: list[tuple[float, float, float, bool]] = []
+    for x in range(width):
+        for key, ys in itertools.groupby(range(height), key=lambda y: (x == 0 or not grid[y][x - 1]) and grid[y][x]):
+            if not key:
+                continue
+            ys = list(ys)
+            y1 = ys[0]
+            y2 = ys[-1] + 1
+            border.append((x * sx, y1 * sy, y2 * sy, True))
+        for key, ys in itertools.groupby(range(height), key=lambda y: grid[y][x] and (x + 1 == width or not grid[y][x + 1])):
+            if not key:
+                continue
+            ys = list(ys)
+            y1 = ys[0]
+            y2 = ys[-1] + 1
+            border.append(((x + 1) * sx, y1 * sy, y2 * sy, False))
+    return border
 
 
 Color = list[int]
@@ -135,11 +248,16 @@ all_xy: list[tuple[int, int]] = [
     for x in range(subpixels_width)
 ]
 
+all_rectangles: list[tuple[float, float, float, float]] = [(0, 0, 16, 16)]
+all_x_border: list[tuple[float, float, float, bool]] = [(0, 0, 16, True), (16, 0, 16, False)]
+all_y_border: list[tuple[float, float, float, bool]] = [(0, 0, 16, True), (16, 0, 16, False)]
+
 @dataclasses.dataclass
 class Texture:
     name: str
     subpixels: list[tuple[int, int]]
     colors: list[tuple[int, int, int]]
+    is_see_through: bool
 
 textures: list[Texture] = []
 
@@ -147,11 +265,18 @@ for z, subpixels in enumerate(subpixels_by_z):
     kind = "opaque" if z == 0 else "transparent"
     catalogue = catalogue_by_kind[kind]
 
-    # Split subpixels into rectangles
-    rectangles: list[tuple[float, float, float, float]] = []
     grid = [[False] * subpixels_width for _ in range(subpixels_height)]
+    transposed_grid = [[False] * subpixels_height for _ in range(subpixels_width)]
     for x, y in subpixels:
         grid[y][x] = True
+        transposed_grid[x][y] = True
+
+    # Find borders
+    x_border = detect_x_border(grid)
+    y_border = detect_x_border(transposed_grid)
+
+    # Split subpixels into rectangles
+    rectangles: list[tuple[float, float, float, float]] = []
     for y1 in range(subpixels_height):
         for x1 in range(subpixels_width):
             if not grid[y1][x1]:
@@ -173,15 +298,12 @@ for z, subpixels in enumerate(subpixels_by_z):
             ))
 
     if z == 0:
-        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
+        create_model(f"f{z}", z, False, all_rectangles, all_x_border, all_y_border)
     elif z == 3:
-        create_model(f"b{z}", z, False, rectangles)
-        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
+        create_model(f"b{z}", z, False, rectangles, x_border, y_border)
     else:
-        create_model(f"b{z}", z, False, rectangles)
-        create_model(f"f{z}", z, False, [(0, 0, 16, 16)])
-        create_model(f"p{z}", z, True, rectangles)
-        create_model(f"c{z}", z, True, [(0, 0, 16, 16)])
+        create_model(f"b{z}", z, False, rectangles, x_border, y_border)
+        create_model(f"p{z}", z, True, rectangles, x_border, y_border)
 
     for subpixel_colors in itertools.product(config["colors"], repeat=len(subpixels)):
         key = tuple(map(tuple, subpixel_colors))
@@ -207,7 +329,7 @@ for z, subpixels in enumerate(subpixels_by_z):
         if z == 0:
             prefix = "f"
         else:
-            prefix = "bfpc"[bool(prediction) * 2 + is_see_through]
+            prefix = "bp"[bool(prediction)]
 
         model_description = {
             "parent": f"{prefix}{z}",
@@ -216,11 +338,11 @@ for z, subpixels in enumerate(subpixels_by_z):
 
         texture_subpixels = all_xy if z == 0 and prediction else subpixels
         texture_colors = prediction if z == 0 and prediction else subpixel_colors
-        textures.append(Texture(f"t{next_id}", texture_subpixels, texture_colors))
+        textures.append(Texture(f"t{next_id}", texture_subpixels, texture_colors, is_see_through))
         model_description["textures"]["t"] = f"t{next_id}"
 
         if z > 0 and prediction:
-            textures.append(Texture(f"p{next_id}", all_xy, prediction))
+            textures.append(Texture(f"p{next_id}", all_xy, prediction, is_see_through))
             model_description["textures"]["p"] = f"p{next_id}"
 
         with open(f"{assets_root}/minecraft/models/m{next_id}.json", "w") as f:
@@ -251,6 +373,10 @@ im = Image.new("RGBA", (subpixels_width * len(textures), subpixels_height))
 pix = im.load()
 
 for i, texture in enumerate(textures):
+    if not texture.is_see_through:
+        for y in range(subpixels_height):
+            for xs in range(subpixels_width):
+                pix[x + i * subpixels_width, y] = (255, 0, 255, 255)
     for (x, y), color in zip(texture.subpixels, texture.colors):
         pix[x + i * subpixels_width, y] = tuple(color + [255])
 
