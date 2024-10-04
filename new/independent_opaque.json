@@ -3,7 +3,8 @@ crimson_hyphae warped_hyphae {"axis":["x","?y","z"]}
 crimson_nylium warped_nylium {}
 crimson_stem warped_stem {"axis":["x","?y","z"]}
 stripped_crimson_hyphae stripped_crimson_stem stripped_warped_hyphae stripped_warped_stem {"axis":["x","?y","z"]}
-obsidian crying_obsidian {}
+obsidian {}
+// crying_obsidian {}
 prismarine dark_prismarine {}
 // daylight_detector {"inverted":["false","true"]}
 andesite diorite granite {}
