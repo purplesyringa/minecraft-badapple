@@ -376,7 +376,7 @@ for i, texture in enumerate(textures):
     if not texture.is_see_through:
         for y in range(subpixels_height):
             for xs in range(subpixels_width):
-                pix[x + i * subpixels_width, y] = (255, 0, 255, 255)
+                pix[x + i * subpixels_width, y] = (127, 127, 127, 255)
     for (x, y), color in zip(texture.subpixels, texture.colors):
         pix[x + i * subpixels_width, y] = tuple(color + [255])
 
