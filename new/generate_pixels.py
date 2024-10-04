@@ -190,9 +190,19 @@ for z, subpixels in enumerate(subpixels_by_z):
         model_location = f"m{next_id}"
 
         blockstates, is_see_through = catalogue.pop()
+        filtered_blockstates = []
         for (block, state) in blockstates:
             block_to_variants[block].append((state, model_location))
-        render_rules.append(RenderRule(z, subpixel_colors, prediction, blockstates))
+            filtered_blockstates.append((
+                block,
+                {
+                    key: value
+                    for key, value
+                    in state.items()
+                    if not value.startswith("?")
+                }
+            ))
+        render_rules.append(RenderRule(z, subpixel_colors, prediction, filtered_blockstates))
 
         if z == 0:
             prefix = "f"
@@ -226,7 +236,7 @@ with open("render_rules.json", "w") as f:
 for block, variants in block_to_variants.items():
     blockstates_description = {
         "variants": {
-            ",".join(f"{key}={value}" for key, value in state.items()): {
+            ",".join(f"{key}={value.lstrip('?')}" for key, value in state.items()): {
                 "model": model_location
             }
             for state, model_location in variants
