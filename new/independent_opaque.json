@@ -31,7 +31,7 @@ deepslate_tiles {}
 reinforced_deepslate {}
 respawn_anchor {} // {"charges":["0","1","2","3","4"]}
 rooted_dirt {}
-sculk {}
+// sculk {}
 // sculk_shrieker {} // {"can_summon":["false","true"]}
 smithing_table {}
 // smoker {"facing":["east","north","south","west"]} // {"lit":["false","true"]}
