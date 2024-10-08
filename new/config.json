@@ -4,8 +4,10 @@
     "frames_root": "/home/purplesyringa/badapple/frames",
     "colors": [
         [0, 0, 0],
-        [85, 85, 85],
-        [170, 170, 170],
+        [51, 51, 51],
+        [102, 102, 102],
+        [153, 153, 153],
+        [204, 204, 204],
         [255, 255, 255]
     ],
     "pixel": {
@@ -16,7 +18,7 @@
         "width": 4,
         "height": 4
     },
-    "predictions": 800,
+    "predictions": 409,
     "video": {
         "width": 512,
         "height": 384

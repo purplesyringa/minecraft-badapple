@@ -42,11 +42,14 @@ def parse_catalogue(data: str) -> Catalogue:
 
     return catalogue
 
-catalogue_by_kind: dict[str, Catalogue] = {}
+
+catalogue: Catalogue = []
 
 for kind in ["opaque", "transparent"]:
     with open(f"independent_{kind}.json") as f:
-        catalogue_by_kind[kind] = parse_catalogue(f.read())[::-1]
+        catalogue += parse_catalogue(f.read())
+
+catalogue = catalogue[::-1]
 
 
 for relative_path in [
@@ -137,7 +140,7 @@ pixel_render_rules: list[EquivalentBlockStates] = []
 pixel_textures: list[Texture] = []
 
 for texture_id, subpixel_colors in enumerate(itertools.product(map(tuple, config["colors"]), repeat=pixel_size)):
-    blockstates = catalogue_by_kind["opaque"].pop()
+    blockstates = catalogue.pop()
     filtered_blockstates = []
     for block, state in blockstates:
         block_to_variants[block].append((state, f"p{texture_id}"))
@@ -178,7 +181,7 @@ for texture_id, subpixel_colors_value in enumerate(superpixel_predictions):
             subpixel_colors.append(color)
     subpixel_colors.reverse()
 
-    blockstates = catalogue_by_kind["opaque"].pop()
+    blockstates = catalogue.pop()
     filtered_blockstates = []
     for block, state in blockstates:
         block_to_variants[block].append((state, f"s{texture_id}"))
