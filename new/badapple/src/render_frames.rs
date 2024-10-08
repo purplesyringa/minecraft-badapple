@@ -1,6 +1,6 @@
 mod types;
 
-use crate::types::{Color, Config, Prediction};
+use crate::types::{Color, Config};
 use fastnbt::{nbt, value::Value};
 use flate2::{write::GzEncoder, Compression};
 use image::RgbImage;
@@ -21,23 +21,10 @@ struct BlockState {
 
 type EquivalentBlockStates = Vec<BlockState>;
 
-#[derive(Deserialize, PartialEq, Eq, Hash, Clone)]
-struct RenderRuleKey {
-    z: usize,
-    subpixel_colors: Vec<Color>,
-}
-
 #[derive(Deserialize)]
-struct RenderRule {
-    #[serde(flatten)]
-    key: RenderRuleKey,
-    prediction: Option<Vec<Color>>,
-    blockstates: EquivalentBlockStates,
-}
-
-struct ParsedRenderRule {
-    id: usize,
-    blockstates: EquivalentBlockStates,
+struct RenderRules {
+    pixel: Vec<EquivalentBlockStates>,
+    superpixel: Vec<EquivalentBlockStates>,
 }
 
 #[derive(Serialize)]
@@ -51,29 +38,34 @@ struct BlockInfo {
 }
 
 #[derive(Serialize)]
-struct PaletteEntry {
+struct PaletteEntry<'a> {
     #[serde(rename = "Name")]
-    name: String,
+    name: &'a str,
     #[serde(rename = "Properties")]
     properties: Option<NBT>,
 }
 
 #[derive(Serialize)]
-struct Structure {
+struct Structure<'a> {
     size: Coordinates,
     entities: Vec<()>,
     blocks: Vec<BlockInfo>,
-    palette: Vec<PaletteEntry>,
+    palette: Vec<PaletteEntry<'a>>,
     #[serde(rename = "DataVersion")]
     data_version: i32,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+enum TextureId {
+    Unknown,
+    Barrier,
+    Pixel(usize),
+    Superpixel(usize),
 }
 
 const STRUCTURE_SIZE: usize = 48;
 const VERSION: usize = 2;
 const DEPTH: usize = 7;
-
-const BLOCKSTATE_UNKNOWN: (usize, usize) = (usize::MAX, 0);
-const BLOCKSTATE_BARRIER: (usize, usize) = (usize::MAX, 1);
 
 fn main() {
     let config: Config = serde_json::from_str(
@@ -81,53 +73,42 @@ fn main() {
     )
     .expect("Invalid config");
 
-    let block_width = config.video.width / config.subpixels.width;
-    let block_height = config.video.height / config.subpixels.height;
+    let color_to_id: HashMap<Color, usize> = config
+        .colors
+        .iter()
+        .enumerate()
+        .map(|(i, color)| (*color, i))
+        .collect();
 
-    let mut subpixels_by_z = vec![Vec::new(); 4];
-    for (y, row) in config.subpixels.distribution.iter().enumerate() {
-        for (x, z) in row.iter().enumerate() {
-            subpixels_by_z[*z].push((x, y));
-        }
-    }
+    let superpixel_predictions: Vec<u64> = serde_json::from_str(
+        &std::fs::read_to_string("../superpixel_predictions.json")
+            .expect("Failed to read superpixel_predictions.json"),
+    )
+    .expect("Invalid superpixel predictions");
+    let superpixel_predictions: HashMap<u64, usize> = superpixel_predictions
+        .into_iter()
+        .enumerate()
+        .map(|(i, value)| (value, i))
+        .collect();
 
-    let mut render_rules = HashMap::new();
-    let mut fully_predicted_pixels: HashMap<Vec<Color>, usize> = HashMap::new();
-    for render_rule in serde_json::from_str::<Vec<RenderRule>>(
+    let width_in_blocks = config.video.width / config.pixel.width;
+    let height_in_blocks = config.video.height / config.pixel.height;
+    let pixels_in_superpixel_width = config.superpixel.width / config.pixel.width;
+    let pixels_in_superpixel_height = config.superpixel.height / config.pixel.height;
+    let pixels_in_superpixel = pixels_in_superpixel_width * pixels_in_superpixel_height;
+
+    let barrier_blockstates = [BlockState {
+        block: "barrier".to_string(),
+        state: NBT(HashMap::new()),
+    }];
+
+    let render_rules: RenderRules = serde_json::from_str(
         &std::fs::read_to_string("../render_rules.json").expect("Failed to read render_rules.json"),
     )
-    .expect("Invalid render rules")
-    {
-        if let Some(prediction) = render_rule.prediction {
-            fully_predicted_pixels.insert(prediction, render_rule.key.z);
-        }
-        render_rules.insert(
-            render_rule.key,
-            ParsedRenderRule {
-                id: render_rules.len(),
-                blockstates: render_rule.blockstates,
-            },
-        );
-    }
+    .expect("Invalid render rules");
 
-    let subpixel_predictions: [Vec<Prediction>; 3] = serde_json::from_str(
-        &std::fs::read_to_string("../subpixel_predictions.json")
-            .expect("Failed to read subpixel_predictions.json"),
-    )
-    .expect("Invalid subpixel predictions");
-
-    let z0_subpixel_predictions: HashMap<Vec<Color>, Vec<Color>> = subpixel_predictions[0]
-        .iter()
-        .map(|prediction| (prediction.from.clone(), prediction.to.clone()))
-        .collect();
-
-    let mut current_video_blockstates: Vec<Vec<[(usize, usize); 4]>> = (0..block_width)
-        .map(|_x| {
-            (0..block_height)
-                .map(|_y| [BLOCKSTATE_UNKNOWN; 4])
-                .collect()
-        })
-        .collect();
+    let mut current_video_textures: Vec<Vec<TextureId>> =
+        vec![vec![TextureId::Unknown; width_in_blocks]; height_in_blocks];
 
     let mut frame_file_names: Vec<OsString> = std::fs::read_dir(&config.frames_root)
         .expect("Cannot read frames directory")
@@ -151,10 +132,17 @@ fn main() {
             frame.to_rgb8()
         });
 
-        for megapixel_x in 0..block_width.div_ceil(STRUCTURE_SIZE) {
-            for megapixel_y in 0..block_height.div_ceil(STRUCTURE_SIZE) {
-                let width = STRUCTURE_SIZE.min(block_width - STRUCTURE_SIZE * megapixel_x);
-                let height = STRUCTURE_SIZE.min(block_height - STRUCTURE_SIZE * megapixel_y);
+        for megapixel_x in 0..width_in_blocks.div_ceil(STRUCTURE_SIZE) {
+            for megapixel_y in 0..height_in_blocks.div_ceil(STRUCTURE_SIZE) {
+                let structure_width_in_blocks =
+                    STRUCTURE_SIZE.min(width_in_blocks - STRUCTURE_SIZE * megapixel_x);
+                let structure_height_in_blocks =
+                    STRUCTURE_SIZE.min(height_in_blocks - STRUCTURE_SIZE * megapixel_y);
+
+                let structure_width_in_superpixels =
+                    structure_width_in_blocks * config.pixel.width / config.superpixel.width;
+                let structure_height_in_superpixels =
+                    structure_height_in_blocks * config.pixel.height / config.superpixel.height;
 
                 let mut blocks = vec![BlockInfo {
                     pos: Coordinates(4 * parity as i32, 0, 0),
@@ -182,8 +170,8 @@ fn main() {
                         "rotation": "NONE",
                         "seed": 0i64,
                         "showboundingbox": 0i8,
-                        "sizeX": width as i32,
-                        "sizeY": height as i32,
+                        "sizeX": structure_width_in_blocks as i32,
+                        "sizeY": structure_height_in_blocks as i32,
                         "sizeZ": DEPTH as i32,
                         "showair": 0i8,
                     })),
@@ -191,11 +179,11 @@ fn main() {
 
                 let mut palette = vec![
                     PaletteEntry {
-                        name: "structure_block".to_string(),
+                        name: "structure_block",
                         properties: Some(NBT([("mode".to_string(), "load".to_string())].into())),
                     },
                     PaletteEntry {
-                        name: "repeater".to_string(),
+                        name: "repeater",
                         properties: Some(NBT([
                             ("delay", "1"),
                             ("facing", ["east", "south"][half_parity]),
@@ -206,11 +194,11 @@ fn main() {
                         .into())),
                     },
                     PaletteEntry {
-                        name: "air".to_string(),
+                        name: "air",
                         properties: None,
                     },
                     PaletteEntry {
-                        name: "stone".to_string(),
+                        name: "stone",
                         properties: None,
                     },
                 ];
@@ -237,88 +225,91 @@ fn main() {
 
                     let mut blockstate_palette_index = HashMap::new();
 
-                    for relative_x in 0..width {
-                        for relative_y in 0..height {
-                            let block_x = megapixel_x * STRUCTURE_SIZE + relative_x;
-                            let block_y =
-                                block_height - 1 - (megapixel_y * STRUCTURE_SIZE + relative_y);
+                    for superpixel_y in 0..structure_height_in_superpixels {
+                        for superpixel_x in 0..structure_width_in_superpixels {
+                            let superpixel_x0 = megapixel_x * STRUCTURE_SIZE * config.pixel.width
+                                + superpixel_x * config.superpixel.width;
+                            let superpixel_y0 = config.video.height
+                                - megapixel_y * STRUCTURE_SIZE * config.pixel.height
+                                - (superpixel_y + 1) * config.superpixel.height;
 
-                            let mut subpixel_colors_by_z = [const { Vec::new() }; 4];
-                            let mut all_subpixel_colors = Vec::new();
-                            for relative_subpixel_y in 0..config.subpixels.height {
-                                for relative_subpixel_x in 0..config.subpixels.width {
-                                    let z = config.subpixels.distribution[relative_subpixel_y]
-                                        [relative_subpixel_x];
+                            let mut superpixel_value: u64 = 0;
+                            let mut subpixel_values: Vec<usize> = vec![0; pixels_in_superpixel];
 
-                                    let subpixel_x =
-                                        block_x * config.subpixels.width + relative_subpixel_x;
-                                    let subpixel_y =
-                                        block_y * config.subpixels.height + relative_subpixel_y;
-                                    let pixel =
-                                        frame.get_pixel(subpixel_x as u32, subpixel_y as u32);
+                            for dy in 0..config.superpixel.height {
+                                for dx in 0..config.superpixel.width {
+                                    let pixel = frame.get_pixel(
+                                        (superpixel_x0 + dx) as u32,
+                                        (superpixel_y0 + dy) as u32,
+                                    );
                                     let color = Color(pixel.0[0], pixel.0[1], pixel.0[2]);
+                                    let color_id = color_to_id[&color];
 
-                                    subpixel_colors_by_z[z].push(color);
-                                    all_subpixel_colors.push(color);
+                                    superpixel_value = superpixel_value
+                                        * config.colors.len() as u64
+                                        + color_id as u64;
+
+                                    let subpixel_id =
+                                        (dy / config.pixel.height * config.superpixel.width + dx)
+                                            / config.pixel.width;
+                                    subpixel_values[subpixel_id] = subpixel_values[subpixel_id]
+                                        * config.colors.len()
+                                        + color_id;
                                 }
                             }
 
-                            let full_prediction = fully_predicted_pixels.get(&all_subpixel_colors);
-                            let z0_prediction =
-                                z0_subpixel_predictions.get(&subpixel_colors_by_z[0]);
-
-                            for (z, subpixel_colors) in subpixel_colors_by_z.into_iter().enumerate()
+                            let mut textures: Vec<TextureId>;
+                            if let Some(superpixel_texture_id) =
+                                superpixel_predictions.get(&superpixel_value)
                             {
-                                let is_barrier = match full_prediction {
-                                    Some(pred_z) => z != *pred_z,
-                                    None => {
-                                        z > 0
-                                            && z0_prediction.is_some_and(|z0_prediction| {
-                                                subpixel_colors.iter().zip(&subpixels_by_z[z]).all(
-                                                    |(color, (x, y))| {
-                                                        *color
-                                                            == z0_prediction
-                                                                [y * config.subpixels.height + x]
-                                                    },
-                                                )
-                                            })
-                                    }
-                                };
+                                textures = vec![TextureId::Barrier; pixels_in_superpixel];
+                                textures[0] = TextureId::Superpixel(*superpixel_texture_id);
+                            } else {
+                                textures =
+                                    subpixel_values.into_iter().map(TextureId::Pixel).collect();
+                            }
 
-                                let blockstate;
-                                let blockstate_key;
-                                if is_barrier {
-                                    blockstate = BlockState {
-                                        block: "barrier".to_string(),
-                                        state: NBT(HashMap::new()),
-                                    };
-                                    blockstate_key = BLOCKSTATE_BARRIER;
-                                } else {
-                                    let render_rule = &render_rules[&RenderRuleKey {
-                                        z,
-                                        subpixel_colors: subpixel_colors.clone(),
-                                    }];
-                                    let index =
-                                        (block_x + block_y + z) % render_rule.blockstates.len();
-                                    blockstate = render_rule.blockstates[index].clone();
-                                    blockstate_key = (render_rule.id, index);
-                                }
+                            for (i, texture_id) in textures.into_iter().enumerate() {
+                                let dy = i / pixels_in_superpixel_width;
+                                let dx = i % pixels_in_superpixel_width;
 
-                                let cur = &mut current_video_blockstates[block_x][block_y][z];
-                                if *cur == blockstate_key {
+                                let relative_block_x =
+                                    superpixel_x * pixels_in_superpixel_width + dx;
+                                let relative_block_y = superpixel_y * pixels_in_superpixel_height
+                                    + pixels_in_superpixel_height
+                                    - 1
+                                    - dy;
+
+                                let block_x = megapixel_x * STRUCTURE_SIZE + relative_block_x;
+                                let block_y = megapixel_y * STRUCTURE_SIZE + relative_block_y;
+
+                                if std::mem::replace(
+                                    &mut current_video_textures[block_y][block_x],
+                                    texture_id,
+                                ) == texture_id
+                                {
                                     continue;
                                 }
-                                *cur = blockstate_key;
+
+                                let render_rule_blockstates: &[BlockState] = match texture_id {
+                                    TextureId::Unknown => unreachable!(),
+                                    TextureId::Barrier => &barrier_blockstates,
+                                    TextureId::Pixel(id) => &render_rules.pixel[id],
+                                    TextureId::Superpixel(id) => &render_rules.superpixel[id],
+                                };
+                                let blockstate_index =
+                                    (block_x + block_y) % render_rule_blockstates.len();
+                                let blockstate = &render_rule_blockstates[blockstate_index];
 
                                 let state = blockstate_palette_index
-                                    .entry(blockstate_key)
+                                    .entry((texture_id, blockstate_index))
                                     .or_insert_with(|| {
                                         palette.push(PaletteEntry {
-                                            name: blockstate.block,
+                                            name: &blockstate.block,
                                             properties: if blockstate.state.0.is_empty() {
                                                 None
                                             } else {
-                                                Some(blockstate.state)
+                                                Some(blockstate.state.clone())
                                             },
                                         });
                                         palette.len() - 1
@@ -326,9 +317,9 @@ fn main() {
 
                                 blocks.push(BlockInfo {
                                     pos: Coordinates(
-                                        relative_x as i32,
-                                        relative_y as i32,
-                                        3 + z as i32,
+                                        relative_block_x as i32,
+                                        relative_block_y as i32,
+                                        3,
                                     ),
                                     state: (*state).try_into().expect("too many states"),
                                     nbt: None,
@@ -356,7 +347,11 @@ fn main() {
                 }
 
                 let structure = Structure {
-                    size: Coordinates(width as i32, height as i32, DEPTH as i32),
+                    size: Coordinates(
+                        structure_width_in_blocks as i32,
+                        structure_height_in_blocks as i32,
+                        DEPTH as i32,
+                    ),
                     entities: Vec::new(),
                     blocks,
                     palette,

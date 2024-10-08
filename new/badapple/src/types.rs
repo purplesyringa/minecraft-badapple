@@ -4,10 +4,12 @@ use std::path::PathBuf;
 #[derive(Deserialize)]
 pub struct Config {
     pub video: ConfigVideo,
-    pub subpixels: ConfigSubpixels,
+    pub pixel: ConfigPixel,
+    pub superpixel: ConfigSuperpixel,
     pub frames_root: PathBuf,
     pub structures_root: String,
     pub colors: Vec<Color>,
+    pub predictions: usize,
 }
 
 #[derive(Deserialize)]
@@ -17,10 +19,15 @@ pub struct ConfigVideo {
 }
 
 #[derive(Deserialize)]
-pub struct ConfigSubpixels {
+pub struct ConfigPixel {
     pub width: usize,
     pub height: usize,
-    pub distribution: Vec<Vec<usize>>,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigSuperpixel {
+    pub width: usize,
+    pub height: usize,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy, Debug)]
