@@ -80,12 +80,12 @@ fn main() {
         .map(|(i, color)| (*color, i))
         .collect();
 
-    let superpixel_predictions: Vec<u64> = serde_json::from_str(
+    let superpixel_predictions: Vec<u128> = serde_json::from_str(
         &std::fs::read_to_string("../superpixel_predictions.json")
             .expect("Failed to read superpixel_predictions.json"),
     )
     .expect("Invalid superpixel predictions");
-    let superpixel_predictions: HashMap<u64, usize> = superpixel_predictions
+    let superpixel_predictions: HashMap<u128, usize> = superpixel_predictions
         .into_iter()
         .enumerate()
         .map(|(i, value)| (value, i))
@@ -116,6 +116,11 @@ fn main() {
         .collect();
     frame_file_names.sort();
 
+    let superpixel_texture_x = [0, 0, 1][pixels_in_superpixel_width - 1];
+    let superpixel_texture_y = [0, 1, 1][pixels_in_superpixel_height - 1];
+    let superpixel_texture_offset =
+        superpixel_texture_y * pixels_in_superpixel_width + superpixel_texture_x;
+
     for frame_num in 0..frame_file_names.len() + 2 {
         if frame_num % 10 == 0 {
             eprintln!("Frame {frame_num}");
@@ -139,10 +144,12 @@ fn main() {
                 let structure_height_in_blocks =
                     STRUCTURE_SIZE.min(height_in_blocks - STRUCTURE_SIZE * megapixel_y);
 
-                let structure_width_in_superpixels =
-                    structure_width_in_blocks * config.pixel.width / config.superpixel.width;
-                let structure_height_in_superpixels =
-                    structure_height_in_blocks * config.pixel.height / config.superpixel.height;
+                let structure_width_in_superpixels = (structure_width_in_blocks
+                    * config.pixel.width)
+                    .div_ceil(config.superpixel.width);
+                let structure_height_in_superpixels = (structure_height_in_blocks
+                    * config.pixel.height)
+                    .div_ceil(config.superpixel.height);
 
                 let mut blocks = vec![BlockInfo {
                     pos: Coordinates(4 * parity as i32, 0, 0),
@@ -229,25 +236,30 @@ fn main() {
                         for superpixel_x in 0..structure_width_in_superpixels {
                             let superpixel_x0 = megapixel_x * STRUCTURE_SIZE * config.pixel.width
                                 + superpixel_x * config.superpixel.width;
-                            let superpixel_y0 = config.video.height
-                                - megapixel_y * STRUCTURE_SIZE * config.pixel.height
-                                - (superpixel_y + 1) * config.superpixel.height;
+                            let superpixel_y0 = config.video.height.wrapping_sub(
+                                megapixel_y * STRUCTURE_SIZE * config.pixel.height
+                                    + (superpixel_y + 1) * config.superpixel.height,
+                            );
 
-                            let mut superpixel_value: u64 = 0;
+                            let mut superpixel_value: u128 = 0;
                             let mut subpixel_values: Vec<usize> = vec![0; pixels_in_superpixel];
 
                             for dy in 0..config.superpixel.height {
                                 for dx in 0..config.superpixel.width {
-                                    let pixel = frame.get_pixel(
-                                        (superpixel_x0 + dx) as u32,
-                                        (superpixel_y0 + dy) as u32,
-                                    );
+                                    let x = superpixel_x0 + dx;
+                                    let y = superpixel_y0.wrapping_add(dy);
+
+                                    if x >= config.video.width || (y as isize) < 0 {
+                                        continue;
+                                    }
+
+                                    let pixel = frame.get_pixel(x as u32, y as u32);
                                     let color = Color(pixel.0[0], pixel.0[1], pixel.0[2]);
                                     let color_id = color_to_id[&color];
 
                                     superpixel_value = superpixel_value
-                                        * config.colors.len() as u64
-                                        + color_id as u64;
+                                        * config.colors.len() as u128
+                                        + color_id as u128;
 
                                     let subpixel_id =
                                         (dy / config.pixel.height * config.superpixel.width + dx)
@@ -258,15 +270,19 @@ fn main() {
                                 }
                             }
 
-                            let mut textures: Vec<TextureId>;
-                            if let Some(superpixel_texture_id) =
-                                superpixel_predictions.get(&superpixel_value)
+                            let mut textures: Vec<TextureId> =
+                                subpixel_values.into_iter().map(TextureId::Pixel).collect();
+
+                            if superpixel_x0 + config.superpixel.width <= config.video.width
+                                && ((superpixel_y0 + config.superpixel.height) as isize) > 0
                             {
-                                textures = vec![TextureId::Barrier; pixels_in_superpixel];
-                                textures[0] = TextureId::Superpixel(*superpixel_texture_id);
-                            } else {
-                                textures =
-                                    subpixel_values.into_iter().map(TextureId::Pixel).collect();
+                                if let Some(superpixel_texture_id) =
+                                    superpixel_predictions.get(&superpixel_value)
+                                {
+                                    textures = vec![TextureId::Barrier; pixels_in_superpixel];
+                                    textures[superpixel_texture_offset] =
+                                        TextureId::Superpixel(*superpixel_texture_id);
+                                }
                             }
 
                             for (i, texture_id) in textures.into_iter().enumerate() {
@@ -282,6 +298,10 @@ fn main() {
 
                                 let block_x = megapixel_x * STRUCTURE_SIZE + relative_block_x;
                                 let block_y = megapixel_y * STRUCTURE_SIZE + relative_block_y;
+
+                                if block_x >= width_in_blocks || block_y >= height_in_blocks {
+                                    continue;
+                                }
 
                                 if std::mem::replace(
                                     &mut current_video_textures[block_y][block_x],

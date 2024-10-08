@@ -85,12 +85,22 @@ with open(f"{assets_root}/minecraft/models/p.json", "w") as f:
     json.dump(model_description, f)
 
 
+SUPERPIXEL_COORDINATE_RANGES = [None, (0, 16), (0, 32), (-16, 32)]
+
 model_description = {
     "ambientocclusion": False,
     "elements": [
         {
-            "from": [0, 16 * (1 - superpixel_height // pixel_height), 0],
-            "to": [16 * superpixel_width // pixel_width, 16, 16],
+            "from": [
+                SUPERPIXEL_COORDINATE_RANGES[superpixel_width // pixel_width][0],
+                SUPERPIXEL_COORDINATE_RANGES[superpixel_height // pixel_height][0],
+                0
+            ],
+            "to": [
+                SUPERPIXEL_COORDINATE_RANGES[superpixel_width // pixel_width][1],
+                SUPERPIXEL_COORDINATE_RANGES[superpixel_height // pixel_height][1],
+                16
+            ],
             "shade": False,
             "faces": {
                 "south": {

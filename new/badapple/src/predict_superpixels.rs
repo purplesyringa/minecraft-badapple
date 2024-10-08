@@ -28,7 +28,7 @@ fn main() {
         .collect();
     frame_file_names.sort();
 
-    let mut statistics: HashMap<u64, usize> = HashMap::new();
+    let mut statistics: HashMap<u128, usize> = HashMap::new();
 
     let mut last_frame_values = vec![vec![0; width_in_superpixels]; height_in_superpixels];
 
@@ -47,14 +47,15 @@ fn main() {
 
         for superpixel_y in 0..height_in_superpixels {
             for superpixel_x in 0..width_in_superpixels {
-                let mut value = 0u64;
+                let mut value = 0u128;
                 for y in 0..config.superpixel.height {
                     for x in 0..config.superpixel.width {
                         let subpixel_x = superpixel_x * config.superpixel.width + x;
-                        let subpixel_y = superpixel_y * config.superpixel.height + y;
+                        let subpixel_y =
+                            config.video.height - (superpixel_y + 1) * config.superpixel.height + y;
                         let pixel = frame.get_pixel(subpixel_x as u32, subpixel_y as u32);
                         let color = Color(pixel.0[0], pixel.0[1], pixel.0[2]);
-                        value = value * config.colors.len() as u64 + color_to_id[&color] as u64;
+                        value = value * config.colors.len() as u128 + color_to_id[&color] as u128;
                     }
                 }
 
@@ -73,10 +74,10 @@ fn main() {
         }
     }
 
-    let mut statistics: Vec<(u64, usize)> = statistics.into_iter().collect();
+    let mut statistics: Vec<(u128, usize)> = statistics.into_iter().collect();
     statistics.sort_by_key(|stat| Reverse(stat.1));
 
-    let predictions: Vec<u64> = statistics[..config.predictions]
+    let predictions: Vec<u128> = statistics[..config.predictions]
         .iter()
         .map(|(value, _)| *value)
         .collect();
