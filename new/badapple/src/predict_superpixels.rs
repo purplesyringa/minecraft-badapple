@@ -30,6 +30,8 @@ fn main() {
 
     let mut statistics: HashMap<u64, usize> = HashMap::new();
 
+    let mut last_frame_values = vec![vec![0; width_in_superpixels]; height_in_superpixels];
+
     for (frame_num, frame_file_name) in frame_file_names.iter().enumerate() {
         if frame_num % 10 == 0 {
             eprintln!("Frame {frame_num}");
@@ -40,6 +42,8 @@ fn main() {
         assert_eq!(frame.width() as usize, config.video.width);
         assert_eq!(frame.height() as usize, config.video.height);
         let frame: RgbImage = frame.to_rgb8();
+
+        let mut values_to_increment = Vec::new();
 
         for superpixel_y in 0..height_in_superpixels {
             for superpixel_x in 0..width_in_superpixels {
@@ -53,8 +57,19 @@ fn main() {
                         value = value * config.colors.len() as u64 + color_to_id[&color] as u64;
                     }
                 }
-                *statistics.entry(value).or_default() += 1;
+
+                let prev_value =
+                    std::mem::replace(&mut last_frame_values[superpixel_y][superpixel_x], value);
+                if prev_value != value {
+                    values_to_increment.push(prev_value);
+                    values_to_increment.push(value);
+                }
             }
+        }
+
+        let coeff = values_to_increment.len();
+        for value in values_to_increment {
+            *statistics.entry(value).or_default() += coeff;
         }
     }
 
