@@ -126,7 +126,6 @@ fn main() {
             eprintln!("Frame {frame_num}");
         }
 
-        let half_parity = frame_num / 2 % 2;
         let parity = frame_num % 2;
 
         let frame: Option<RgbImage> = frame_file_names.get(frame_num).map(|frame_file_name| {
@@ -193,7 +192,7 @@ fn main() {
                         name: "repeater",
                         properties: Some(NBT([
                             ("delay", "1"),
-                            ("facing", ["east", "south"][half_parity]),
+                            ("facing", "east"),
                             ("locked", "false"),
                             ("powered", "false"),
                         ]
@@ -212,20 +211,12 @@ fn main() {
 
                 if let Some(ref frame) = frame {
                     blocks.push(BlockInfo {
-                        pos: Coordinates(
-                            (half_parity + 4 * parity) as i32,
-                            0,
-                            1 - half_parity as i32,
-                        ),
+                        pos: Coordinates(4 * parity as i32, 0, 1),
                         state: 2,
                         nbt: None,
                     });
                     blocks.push(BlockInfo {
-                        pos: Coordinates(
-                            (1 - half_parity + 4 * parity) as i32,
-                            0,
-                            half_parity as i32,
-                        ),
+                        pos: Coordinates(1 + 4 * parity as i32, 0, 0),
                         state: 1,
                         nbt: None,
                     });
@@ -348,17 +339,11 @@ fn main() {
                         }
                     }
                 } else {
-                    if half_parity == 0 {
-                        blocks.push(BlockInfo {
-                            pos: Coordinates(
-                                (half_parity + 4 * parity) as i32,
-                                0,
-                                1 - half_parity as i32,
-                            ),
-                            state: 2,
-                            nbt: None,
-                        });
-                    }
+                    blocks.push(BlockInfo {
+                        pos: Coordinates(4 * parity as i32, 0, 1),
+                        state: 2,
+                        nbt: None,
+                    });
                     blocks.push(BlockInfo {
                         pos: Coordinates(1 + 4 * parity as i32, 0, 0),
                         state: 3,
