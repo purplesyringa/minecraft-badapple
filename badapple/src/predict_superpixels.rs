@@ -80,8 +80,9 @@ fn main() {
 
     let predictions: Vec<u128> = statistics[..8192].iter().map(|(value, _)| *value).collect();
 
-    println!(
-        "{}",
-        serde_json::to_string(&predictions).expect("Failed to serialize predictions")
-    );
+    std::fs::write(
+        "../superpixel_predictions.json",
+        serde_json::to_string(&predictions).expect("Failed to serialize predictions"),
+    )
+    .expect("Failed to write predictions");
 }
