@@ -31,10 +31,6 @@ def parse_catalogue(data: str) -> Catalogue:
             continue
         states = json.loads(block_groups.pop())
 
-        is_see_through = block_groups[0] == "[seethrough]"
-        if is_see_through:
-            block_groups.pop(0)
-
         for values in itertools.product(*states.values()):
             state = dict(zip(states.keys(), values))
             for equivalent_blocks in block_groups:

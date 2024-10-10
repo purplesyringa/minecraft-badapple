@@ -8,8 +8,6 @@ for line in sys.stdin:
     if not blocks:
         continue
     states = json.loads(blocks.pop())
-    if blocks[0] == "[seethrough]":
-        blocks.pop(0)
     count = len(blocks)
     for values in states.values():
         count *= len(values)
