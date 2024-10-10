@@ -42,7 +42,7 @@ fn main() {
         let frame = image::open(frame_path).expect("Invalid frame");
         assert_eq!(frame.width() as usize, config.video.width);
         assert_eq!(frame.height() as usize, config.video.height);
-        let frame: RgbImage = frame.to_rgb8();
+        let frame: RgbImage = frame.into_rgb8();
 
         let mut values_to_increment = Vec::new();
 

@@ -134,7 +134,7 @@ fn main() {
             let frame = image::open(frame_path).expect("Invalid frame");
             assert_eq!(frame.width() as usize, config.video.width);
             assert_eq!(frame.height() as usize, config.video.height);
-            frame.to_rgb8()
+            frame.into_rgb8()
         });
 
         for megapixel_x in 0..width_in_blocks.div_ceil(STRUCTURE_SIZE) {

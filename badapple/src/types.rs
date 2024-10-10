@@ -7,6 +7,8 @@ pub struct Config {
     pub superpixel: ConfigSuperpixel,
     pub structures_root: String,
     pub colors: Vec<Color>,
+    pub gamma: f32,
+    pub in_color_range: (u8, u8),
 }
 
 #[derive(Deserialize)]

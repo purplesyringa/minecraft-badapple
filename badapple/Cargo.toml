@@ -21,3 +21,7 @@ path = "src/render_frames.rs"
 [[bin]]
 name = "predict_superpixels"
 path = "src/predict_superpixels.rs"
+
+[[bin]]
+name = "dither"
+path = "src/dither.rs"

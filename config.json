@@ -20,5 +20,7 @@
     "video": {
         "width": 512,
         "height": 384
-    }
+    },
+    "gamma": 1.0,
+    "in_color_range": [16, 239]
 }
