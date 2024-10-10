@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 struct NBT(HashMap<String, String>);
@@ -110,7 +111,7 @@ fn main() {
     let mut current_video_textures: Vec<Vec<TextureId>> =
         vec![vec![TextureId::Unknown; width_in_blocks]; height_in_blocks];
 
-    let mut frame_file_names: Vec<OsString> = std::fs::read_dir(&config.frames_root)
+    let mut frame_file_names: Vec<OsString> = std::fs::read_dir("../frames")
         .expect("Cannot read frames directory")
         .map(|file| file.expect("Cannot read frames directory").file_name())
         .collect();
@@ -129,7 +130,7 @@ fn main() {
         let parity = frame_num % 2;
 
         let frame: Option<RgbImage> = frame_file_names.get(frame_num).map(|frame_file_name| {
-            let frame_path = config.frames_root.join(frame_file_name);
+            let frame_path = Path::new("../frames").join(frame_file_name);
             let frame = image::open(frame_path).expect("Invalid frame");
             assert_eq!(frame.width() as usize, config.video.width);
             assert_eq!(frame.height() as usize, config.video.height);

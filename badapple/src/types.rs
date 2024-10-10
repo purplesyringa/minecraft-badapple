@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[derive(Deserialize)]
 pub struct Config {
     pub video: ConfigVideo,
     pub pixel: ConfigPixel,
     pub superpixel: ConfigSuperpixel,
-    pub frames_root: PathBuf,
     pub structures_root: String,
     pub colors: Vec<Color>,
     pub predictions: usize,

@@ -5,6 +5,7 @@ use image::RgbImage;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::path::Path;
 
 fn main() {
     let config: Config = serde_json::from_str(
@@ -22,7 +23,7 @@ fn main() {
     let width_in_superpixels = config.video.width / config.superpixel.width;
     let height_in_superpixels = config.video.height / config.superpixel.height;
 
-    let mut frame_file_names: Vec<OsString> = std::fs::read_dir(&config.frames_root)
+    let mut frame_file_names: Vec<OsString> = std::fs::read_dir("../frames")
         .expect("Cannot read frames directory")
         .map(|file| file.expect("Cannot read frames directory").file_name())
         .collect();
@@ -37,7 +38,7 @@ fn main() {
             eprintln!("Frame {frame_num}");
         }
 
-        let frame_path = config.frames_root.join(frame_file_name);
+        let frame_path = Path::new("../frames").join(frame_file_name);
         let frame = image::open(frame_path).expect("Invalid frame");
         assert_eq!(frame.width() as usize, config.video.width);
         assert_eq!(frame.height() as usize, config.video.height);

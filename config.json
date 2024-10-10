@@ -1,7 +1,6 @@
 {
     "assets_root": "/baka/minecraft/resourcepacks/Bad Apple!!/assets",
     "structures_root": "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures",
-    "frames_root": "/home/purplesyringa/badapple/frames",
     "colors": [
         [0, 0, 0],
         [51, 51, 51],
