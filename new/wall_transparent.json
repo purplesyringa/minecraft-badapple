@@ -1,8 +1,0 @@
-ladder {"facing":["east","north","south","west"]}
-lever {"powered":["false","true"]} // {"face":["ceiling","floor","wall"],"facing":["east","north","south","west"],"powered":["false","true"]}
-sculk_vein {"north":["true"]} // {"down":["true","false"],"east":["true","false"],"south":["true","false"],"up":["true","false"],"west":["true","false"]}
-tripwire_hook {} // {"attached":["false","true"],"facing":["east","north","south","west"],"powered":["false","true"]}
-vine {"north":["true"]} // {"down":["true","false"],"east":["true","false"],"south":["true","false"],"up":["true","false"],"west":["true","false"]}
-dead_brain_coral_wall_fan dead_bubble_coral_wall_fan dead_fire_coral_wall_fan dead_horn_coral_wall_fan dead_tube_coral_wall_fan {} // {"facing":["east","north","south","west"]}
-acacia_button bamboo_button birch_button cherry_button crimson_button dark_oak_button jungle_button mangrove_button oak_button polished_blackstone_button spruce_button stone_button warped_button {"face":["wall"]} // {"face":["ceiling","floor","wall"],"facing":["east","north","south","west"],"powered":["false","true"]}
-bell {} // {"attachment":["ceiling","double_wall","floor","single_wall"],"facing":["east","north","south","west"]}
