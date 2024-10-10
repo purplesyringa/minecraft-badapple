@@ -78,14 +78,7 @@ fn main() {
     let mut statistics: Vec<(u128, usize)> = statistics.into_iter().collect();
     statistics.sort_by_key(|stat| Reverse(stat.1));
 
-    let predictions: Vec<u128> = statistics[..config.predictions]
-        .iter()
-        .map(|(value, _)| *value)
-        .collect();
-
-    for (value, count) in &statistics[config.predictions..][..16] {
-        eprintln!("Unpredicted {count}: {value}");
-    }
+    let predictions: Vec<u128> = statistics[..8192].iter().map(|(value, _)| *value).collect();
 
     println!(
         "{}",

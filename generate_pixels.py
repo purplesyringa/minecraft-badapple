@@ -167,7 +167,7 @@ superpixel_textures: list[Texture] = []
 with open("superpixel_predictions.json") as f:
     superpixel_predictions = json.load(f)
 
-for texture_id, subpixel_colors_value in enumerate(superpixel_predictions):
+for texture_id, (subpixel_colors_value, blockstates) in enumerate(zip(superpixel_predictions, catalogue[::-1])):
     subpixel_colors: list[Color] = []
     for y in range(superpixel_height - 1, -1, -1):
         for x in range(superpixel_width - 1, -1, -1):
@@ -177,7 +177,6 @@ for texture_id, subpixel_colors_value in enumerate(superpixel_predictions):
             subpixel_colors.append(color)
     subpixel_colors.reverse()
 
-    blockstates = catalogue.pop()
     filtered_blockstates = []
     for block, state in blockstates:
         block_to_variants[block].append((state, f"s{texture_id}"))
