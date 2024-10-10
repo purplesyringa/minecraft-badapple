@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -6,7 +5,7 @@ use std::path::PathBuf;
 const WIDTH: usize = 512;
 const HEIGHT: usize = 384;
 const GAMMA: f64 = 1.0;
-const HALFTONES: u16 = 4;
+const HALFTONES: u16 = 6;
 
 fn build_table(power: f64, inmin: u8, inmax: u8) -> [u8; 256] {
     (0..=255)

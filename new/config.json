@@ -4,20 +4,21 @@
     "frames_root": "/home/purplesyringa/badapple/frames",
     "colors": [
         [0, 0, 0],
-        [85, 85, 85],
-        [170, 170, 170],
+        [51, 51, 51],
+        [102, 102, 102],
+        [153, 153, 153],
+        [204, 204, 204],
         [255, 255, 255]
     ],
-    "subpixels": {
-        "width": 4,
-        "height": 4,
-        "distribution": [
-            [0, 1, 2, 0],
-            [2, 0, 3, 1],
-            [1, 3, 3, 2],
-            [0, 2, 1, 0]
-        ]
+    "pixel": {
+        "width": 2,
+        "height": 2
     },
+    "superpixel": {
+        "width": 4,
+        "height": 4
+    },
+    "predictions": 409,
     "video": {
         "width": 512,
         "height": 384

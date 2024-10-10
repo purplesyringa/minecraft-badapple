@@ -19,5 +19,5 @@ name = "render_frames"
 path = "src/render_frames.rs"
 
 [[bin]]
-name = "predict_subpixel_colors"
-path = "src/predict_subpixel_colors.rs"
+name = "predict_superpixels"
+path = "src/predict_superpixels.rs"
