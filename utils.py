@@ -1,8 +1,14 @@
+import json
 import nbtlib
 from nbtlib import File, Compound, List, Int, String, Byte, Long, Float
 
-ROOT = "/baka/minecraft/saves/Bad Apple!!/generated/badapple/structures"
+
 VERSION = 2
+
+
+with open("config.json") as f:
+    config = json.load(f)
+    structures_root = config["structures_root"]
 
 
 def structure(name: str, size: tuple[int, int, int], *blocks: tuple[Compound, ...]):
@@ -28,7 +34,7 @@ def structure(name: str, size: tuple[int, int, int], *blocks: tuple[Compound, ..
             })
         ]),
         "DataVersion": Int(3955)
-    })).save(f"{ROOT}/{name}v{VERSION}.nbt", gzipped=True)
+    })).save(f"{structures_root}/{name}v{VERSION}.nbt", gzipped=True)
 
 
 def redstone_block(pos: tuple[int, int, int]) -> Compound:
